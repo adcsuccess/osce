@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<meta name="theme-color" content="#E9EDEC">
+<title>OSCE Station</title>
+<style>
+  :root{
+    color-scheme: light only;
+    -webkit-text-size-adjust: 100%;
+    --ink:#12212B;
+    --ink-soft:#4A5C66;
+    --paper:#E9EDEC;
+    --card:#FFFFFF;
+    --teal:#0F6E6E;
+    --teal-pale:#DCEAE8;
+    --amber:#C46A16;
+    --red:#A8322A;
+    --rule:#C9D2D2;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%; background:#E9EDEC}
+  body{
+    background:var(--paper); color:var(--ink);
+    forced-color-adjust:none;
+    font-family:var(--sans); font-size:16px; line-height:1.5;
+    overscroll-behavior-y:none;
+  }
+  button{font-family:inherit; font-size:inherit; cursor:pointer; border:none; background:none; color:inherit}
+  input,textarea,select{font-family:inherit; font-size:16px; color:inherit}
+
+  /* station clock: hairline across the very top */
+  #clock{position:fixed; top:0; left:0; right:0; height:3px; background:var(--rule); z-index:50}
+  #clockFill{height:100%; width:0%; background:var(--teal); transition:width .9s linear}
+  #clock.warn #clockFill{background:var(--amber)}
+  #clock.over #clockFill{background:var(--red)}
+
+  .wrap{max-width:640px; margin:0 auto; padding:26px 20px 40px;
+        padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  .stage{display:none}
+  .stage.on{display:block}
+
+  h1{font-size:23px; line-height:1.25; margin:0 0 6px; font-weight:600; letter-spacing:-.01em}
+  h2{font-size:15px; margin:26px 0 10px; font-weight:600; color:var(--ink-soft)}
+  p.lede{margin:0 0 22px; color:var(--ink-soft); font-size:14.5px}
+
+  label{display:block; font-size:13px; color:var(--ink-soft); margin:14px 0 5px}
+  input[type=text],input[type=password],textarea,select{
+    width:100%; padding:11px 12px; border:1px solid var(--rule);
+    border-radius:3px; background:var(--card);
+  }
+  textarea{min-height:120px; resize:vertical; font-size:14px; line-height:1.45}
+
+  .btn{display:block; width:100%; padding:15px; border-radius:3px;
+       background:var(--ink); color:#fff; font-weight:600; text-align:center; margin-top:20px}
+  .btn.ghost{background:none; color:var(--teal); border:1px solid var(--rule); font-weight:500}
+  .btn:disabled{opacity:.4}
+  .row{display:flex; gap:10px}
+  .row .btn{margin-top:14px}
+
+  /* cue card — printed exam paper */
+  .cue{background:var(--card); border:1px solid var(--rule); border-top:5px solid var(--ink);
+       padding:24px 22px; font-family:var(--serif)}
+  .cue .stationline{font-family:var(--sans); font-size:12px; color:var(--ink-soft);
+       border-bottom:1px solid var(--rule); padding-bottom:10px; margin-bottom:16px}
+  .cue h3{margin:0 0 14px; font-size:19px; font-weight:600}
+  .cue p{margin:0 0 12px; font-size:16px; line-height:1.6}
+  .cue ol{margin:0; padding-left:20px}
+  .cue ol li{margin-bottom:8px; line-height:1.55}
+
+  .timerbig{font-family:var(--serif); font-size:44px; letter-spacing:.02em;
+            font-variant-numeric:tabular-nums; margin:22px 0 0}
+  .timerbig.warn{color:var(--amber)}
+  .timerbig.over{color:var(--red)}
+  .timerlabel{font-size:13px; color:var(--ink-soft); margin-top:2px}
+
+  /* transcript — exam record, not chat bubbles */
+  #script{margin:8px 0 0}
+  .turn{border-left:2px solid var(--rule); padding:2px 0 2px 13px; margin-bottom:16px}
+  .turn.dr{border-left-color:var(--teal)}
+  .turn .who{font-size:11.5px; color:var(--ink-soft); margin-bottom:3px; font-weight:600}
+  .turn.dr .who{color:var(--teal)}
+  .turn .said{font-size:16px; line-height:1.5}
+  .turn.interim .said{color:var(--ink-soft); font-style:italic}
+  .thinking{color:var(--ink-soft); font-size:14px; padding-left:15px}
+
+  /* mic */
+  .micbar{position:sticky; bottom:0; padding:14px 0 calc(14px + env(safe-area-inset-bottom));
+          background:linear-gradient(to top, var(--paper) 72%, rgba(233,237,236,0))}
+  #mic{width:100%; padding:19px; border-radius:3px; background:var(--teal); color:#fff;
+       font-weight:600; text-align:center}
+  #mic.live{background:var(--red)}
+  #mic:disabled{background:var(--rule); color:var(--ink-soft)}
+  .microw{display:flex; gap:8px; margin-top:8px}
+  .microw button{flex:1; padding:11px; border:1px solid var(--rule); border-radius:3px;
+                 font-size:13.5px; color:var(--ink-soft); background:var(--card)}
+
+  /* report */
+  .verdict{background:var(--card); border:1px solid var(--rule); padding:20px 18px; margin-bottom:18px}
+  .verdict .score{font-family:var(--serif); font-size:40px; font-variant-numeric:tabular-nums}
+  .verdict .of{font-size:17px; color:var(--ink-soft)}
+  .fail{background:#F6E4E2; border-color:var(--red); color:var(--red)}
+  .dom{border-top:1px solid var(--rule); padding:14px 0}
+  .dom .head{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+  .dom .name{font-weight:600; font-size:15px}
+  .dom .pts{font-family:var(--serif); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .dom .note{font-size:14px; color:var(--ink-soft); margin-top:6px; line-height:1.5}
+  .selfcheck .name::after{content:" — 자가확인"; font-weight:400; color:var(--amber); font-size:12.5px}
+  .cuelist{list-style:none; padding:0; margin:6px 0 0}
+  .cuelist li{padding:7px 0 7px 24px; border-bottom:1px solid var(--rule);
+              font-size:14.5px; position:relative; line-height:1.45}
+  .cuelist li::before{position:absolute; left:2px; top:7px; font-weight:700}
+  .cuelist li.got::before{content:"✓"; color:var(--teal)}
+  .cuelist li.miss::before{content:"·"; color:var(--rule); font-size:20px; top:3px}
+  .cuelist li.miss{color:var(--ink-soft)}
+
+  .fix{background:var(--card); border-left:3px solid var(--amber); padding:12px 14px; margin-bottom:10px}
+  .fix .said{font-size:14px; color:var(--ink-soft); margin-bottom:5px}
+  .fix .better{font-size:15px}
+
+  .note{font-size:13px; color:var(--ink-soft); margin-top:10px; line-height:1.5}
+  .err{background:#F6E4E2; border:1px solid var(--red); color:var(--red);
+       padding:12px 14px; font-size:14px; margin:16px 0; border-radius:3px}
+  .hide{display:none}
+  a{color:var(--teal)}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<div id="clock"><div id="clockFill"></div></div>
+
+<div class="wrap">
+
+<!-- ─────────── SETUP ─────────── -->
+<section id="s-setup" class="stage on">
+  <h1>OSCE Station</h1>
+  <p class="lede">큐카드를 읽고, 환자와 영어로 말하고, 채점표대로 결과를 받습니다.</p>
+
+  <div id="compat"></div>
+
+  <label for="key">Anthropic API 키</label>
+  <input type="password" id="key" placeholder="sk-ant-..." autocomplete="off">
+  <p class="note">이 폰의 브라우저 저장소에만 남습니다. 서버로 보내지 않습니다.</p>
+
+  <label for="caseSel">케이스</label>
+  <select id="caseSel"></select>
+
+  <label for="model">모델</label>
+  <input type="text" id="model" value="claude-sonnet-5">
+
+  <div class="row">
+    <button class="btn" id="go">스테이션 시작</button>
+  </div>
+  <button class="btn ghost" id="openImport">케이스 불러오기</button>
+
+  <div id="importBox" class="hide">
+    <label for="importJson">케이스 팩 JSON</label>
+    <textarea id="importJson" placeholder='{"id":"...","title":"...", ...}'></textarea>
+    <button class="btn ghost" id="doImport">추가</button>
+    <p class="note">JSON 하나가 케이스 하나입니다. 배열로 여러 개도 됩니다.</p>
+  </div>
+</section>
+
+<!-- ─────────── BRIEFING ─────────── -->
+<section id="s-brief" class="stage">
+  <div class="cue">
+    <div class="stationline" id="briefStation"></div>
+    <h3 id="briefTitle"></h3>
+    <p id="briefSetting"></p>
+    <p id="briefPatient"></p>
+    <ol id="briefTasks"></ol>
+  </div>
+  <div class="timerbig" id="readClock">3:00</div>
+  <div class="timerlabel">읽는 시간</div>
+  <button class="btn" id="enter">들어가기</button>
+  <p class="note">시간이 다 되면 자동으로 시작합니다.</p>
+</section>
+
+<!-- ─────────── STATION ─────────── -->
+<section id="s-station" class="stage">
+  <div class="timerbig" id="stnClock">10:00</div>
+  <div class="timerlabel" id="stnLabel">남은 시간</div>
+  <div id="script"></div>
+  <div class="micbar">
+    <button id="mic">탭하고 말하기</button>
+    <div class="microw">
+      <button id="typeIn">타이핑</button>
+      <button id="repeat">환자 다시 듣기</button>
+      <button id="finish">끝내고 채점</button>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── REPORT ─────────── -->
+<section id="s-report" class="stage">
+  <h1>채점 결과</h1>
+  <div id="report"></div>
+  <button class="btn ghost" id="again">처음으로</button>
+</section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ══════════ 케이스 팩 ══════════
+   아래는 형식을 보여주기 위한 임시 케이스입니다.
+   실제 Divya / Warriors 케이스로 교체해서 쓰세요. */
+const BUILTIN = [{
+  id: "demo-ortho",
+  title: "Orthodontic referral request",
+  station: "Communication station · 10 minutes",
+  readSeconds: 180,
+  stationSeconds: 600,
+  cueCard: {
+    setting: "You are a general dentist in a suburban practice in Australia.",
+    patient: "Jordan, 15, attends with no parent present. Jordan asks to be referred to an orthodontist for clear aligners.",
+    tasks: [
+      "Take a relevant history.",
+      "Explain your findings and what is possible today.",
+      "Agree a plan with the patient."
+    ]
+  },
+  patient: {
+    name: "Jordan",
+    voiceHint: "en-AU",
+    persona:
+      "You are Jordan, 15 years old, Australian, here alone without a parent. " +
+      "You are keen, a bit impatient, and you have seen aligner ads on social media. " +
+      "You speak in short casual sentences. You are not medically trained.",
+    opening: "Hi. So I want to get my teeth straightened. Can you refer me to someone?"
+  },
+  cues: [
+    { id:"c1", label:"부모/보호자 동의 문제를 꺼냄", reveal:"If asked who came with you: you came alone, mum was working and doesn't know you booked." },
+    { id:"c2", label:"무엇이 신경 쓰이는지(구체적 치아) 확인", reveal:"If asked what bothers you: the two upper front teeth stick out and you hate photos." },
+    { id:"c3", label:"기간·비용 기대치 확인", reveal:"If asked about expectations: you think it takes about three months and costs a couple hundred dollars." },
+    { id:"c4", label:"소셜미디어/온라인 aligner 사용 여부", reveal:"If asked where you heard about it: an online brand that mails aligners; you nearly ordered a kit." },
+    { id:"c5", label:"구강위생 습관", reveal:"If asked: you brush once a day, no floss, and drink two energy drinks a day." },
+    { id:"c6", label:"외상 이력", reveal:"If asked about injury: you chipped a front tooth playing footy two years ago, never checked." },
+    { id:"c7", label:"의과적 병력 / 복용약", reveal:"If asked: mild asthma, blue puffer as needed. Nothing else." },
+    { id:"c8", label:"이 방문에 대한 기대(오늘 시작 가능한지)", reveal:"If asked: you were hoping to start today." }
+  ],
+  rubric: {
+    domains: [
+      { id:"demeanour", name:"Demeanour", max:8, autoScore:false,
+        descriptors:"Warmth, eye contact, pace, non-judgemental manner. Cannot be judged from a transcript." },
+      { id:"language", name:"Use of language", max:8,
+        descriptors:"Plain English, no unexplained jargon, short sentences, checks understanding." },
+      { id:"communication", name:"Effective communication", max:8,
+        descriptors:"Open questions first, one question at a time, listens and follows the patient's cues, empathy where warranted." },
+      { id:"organisation", name:"Organisation", max:8,
+        descriptors:"Logical order, signposting, covers history then findings then plan within the time." },
+      { id:"decision", name:"Joint decision making", max:8,
+        descriptors:"Offers options with pros and cons, checks what the patient wants, agrees a concrete next step." }
+    ],
+    criticalFails: [
+      "Agreeing to treat or refer a minor without addressing parental consent",
+      "Endorsing direct-to-consumer aligners without examination",
+      "Giving a guarantee of outcome or duration"
+    ]
+  }
+}];
+
+/* ══════════ 상태 ══════════ */
+const S = {
+  cases: [], caseIx: 0, kase: null,
+  turns: [],            // {role:'dr'|'pt', text}
+  recog: null, listening: false,
+  readT: null, stnT: null, stnLeft: 0,
+  speaking: null, busy: false
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const mmss = s => { s = Math.max(0, Math.round(s));
+  return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+
+function show(id){
+  document.querySelectorAll(".stage").forEach(e => e.classList.remove("on"));
+  $(id).classList.add("on");
+  window.scrollTo(0,0);
+}
+function setClock(frac, state){
+  $("clockFill").style.width = Math.min(100, frac*100) + "%";
+  $("clock").className = state || "";
+}
+function fail(msg){
+  const d = document.createElement("div");
+  d.className = "err"; d.textContent = msg;
+  document.querySelector(".stage.on").prepend(d);
+  setTimeout(() => d.remove(), 9000);
+}
+
+/* ══════════ 저장 ══════════ */
+const store = {
+  get k(){ try{ return localStorage.getItem("osce.key") || ""; }catch(e){ return ""; } },
+  set k(v){ try{ localStorage.setItem("osce.key", v); }catch(e){} },
+  get m(){ try{ return localStorage.getItem("osce.model") || "claude-sonnet-5"; }catch(e){ return "claude-sonnet-5"; } },
+  set m(v){ try{ localStorage.setItem("osce.model", v); }catch(e){} },
+  get packs(){ try{ return JSON.parse(localStorage.getItem("osce.packs") || "[]"); }catch(e){ return []; } },
+  set packs(v){ try{ localStorage.setItem("osce.packs", JSON.stringify(v)); }catch(e){} }
+};
+
+/* ══════════ 호환성 확인 ══════════ */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const canSpeak = "speechSynthesis" in window;
+
+(function compat(){
+  const bad = [];
+  if(!SR) bad.push("이 브라우저는 음성인식을 지원하지 않습니다. 아이폰은 사파리, 안드로이드는 크롬을 쓰세요. 타이핑으로는 계속 진행됩니다.");
+  if(!canSpeak) bad.push("이 브라우저는 음성합성을 지원하지 않습니다. 환자 대사는 글로만 나옵니다.");
+  if(location.protocol !== "https:" && location.hostname !== "localhost")
+    bad.push("https 주소가 아니면 마이크가 차단됩니다. 호스팅한 주소로 여세요.");
+  if(bad.length) $("compat").innerHTML =
+    '<div class="err">' + bad.map(esc).join("<br><br>") + "</div>";
+})();
+
+/* ══════════ 케이스 목록 ══════════ */
+function loadCases(){
+  S.cases = BUILTIN.concat(store.packs);
+  $("caseSel").innerHTML = S.cases
+    .map((c,i) => '<option value="'+i+'">'+esc(c.title)+"</option>").join("");
+}
+
+/* ══════════ 음성 ══════════ */
+let voicePrimed = false;
+function primeVoice(){                       // iOS는 사용자 조작 안에서 한 번 깨워야 함
+  if(voicePrimed || !canSpeak) return;
+  const u = new SpeechSynthesisUtterance(" ");
+  u.volume = 0; speechSynthesis.speak(u); voicePrimed = true;
+}
+function pickVoice(hint){
+  const vs = speechSynthesis.getVoices();
+  return vs.find(v => v.lang === (hint||"en-AU"))
+      || vs.find(v => v.lang && v.lang.startsWith("en-AU"))
+      || vs.find(v => v.lang && v.lang.startsWith("en-GB"))
+      || vs.find(v => v.lang && v.lang.startsWith("en"))
+      || null;
+}
+function say(text){
+  if(!canSpeak) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice(S.kase && S.kase.patient && S.kase.patient.voiceHint);
+  if(v) u.voice = v;
+  u.rate = 1.0; u.pitch = 1.0;
+  S.speaking = text;
+  speechSynthesis.speak(u);
+}
+
+function listen(){
+  if(!SR){ typeTurn(); return; }
+  if(S.listening){ try{ S.recog.stop(); }catch(e){} return; }
+  speechSynthesis && speechSynthesis.cancel();
+
+  const r = new SR();
+  r.lang = "en-AU";
+  r.interimResults = true;
+  r.continuous = false;            // iOS에서는 어차피 무시됨
+  r.maxAlternatives = 1;
+  S.recog = r;
+
+  let finalText = "";
+  r.onstart = () => { S.listening = true; $("mic").classList.add("live");
+                      $("mic").textContent = "듣는 중 — 다 말하면 탭"; };
+  r.onresult = e => {
+    let interim = "";
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) finalText += t + " "; else interim += t;
+    }
+    drawInterim(finalText + interim);
+  };
+  r.onerror = e => {
+    if(e.error === "not-allowed")
+      fail("마이크 권한이 거부됐습니다. 브라우저 설정에서 이 사이트의 마이크를 허용하세요.");
+    else if(e.error !== "aborted" && e.error !== "no-speech")
+      fail("음성인식 오류: " + e.error);
+  };
+  r.onend = () => {
+    S.listening = false;
+    $("mic").classList.remove("live");
+    $("mic").textContent = "탭하고 말하기";
+    clearInterim();
+    const said = finalText.trim();
+    if(said) submitTurn(said);
+  };
+  try{ r.start(); }catch(e){ fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 보세요."); }
+}
+
+function typeTurn(){
+  const t = prompt("치과의사 대사를 입력하세요");
+  if(t && t.trim()) submitTurn(t.trim());
+}
+
+/* ══════════ 대본 그리기 ══════════ */
+function drawScript(){
+  $("script").innerHTML = S.turns.map(t =>
+    '<div class="turn '+(t.role==="dr"?"dr":"pt")+'">' +
+      '<div class="who">'+(t.role==="dr" ? "Dentist" : esc(S.kase.patient.name))+"</div>" +
+      '<div class="said">'+esc(t.text)+"</div></div>").join("");
+  window.scrollTo(0, document.body.scrollHeight);
+}
+function drawInterim(txt){
+  clearInterim();
+  if(!txt) return;
+  const d = document.createElement("div");
+  d.className = "turn dr interim"; d.id = "interim";
+  d.innerHTML = '<div class="who">Dentist</div><div class="said">'+esc(txt)+"</div>";
+  $("script").appendChild(d);
+  window.scrollTo(0, document.body.scrollHeight);
+}
+function clearInterim(){ const e = $("interim"); if(e) e.remove(); }
+
+function thinking(on){
+  const e = $("think");
+  if(on && !e){
+    const d = document.createElement("div");
+    d.className = "thinking"; d.id = "think"; d.textContent = "…";
+    $("script").appendChild(d);
+    window.scrollTo(0, document.body.scrollHeight);
+  } else if(!on && e) e.remove();
+}
+
+/* ══════════ Claude 호출 ══════════ */
+async function claude(system, messages, maxTokens){
+  const key = store.k;
+  if(!key) throw new Error("API 키가 없습니다.");
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: store.m,
+      max_tokens: maxTokens || 400,
+      system: system,
+      messages: messages
+    })
+  });
+  if(!res.ok){
+    let detail = "";
+    try{ const j = await res.json(); detail = (j.error && j.error.message) || ""; }catch(e){}
+    if(res.status === 401) throw new Error("API 키가 거부됐습니다. 키를 확인하세요.");
+    if(res.status === 429) throw new Error("요청 한도에 걸렸습니다. 잠시 뒤 다시.");
+    if(res.status === 404) throw new Error("모델 이름이 잘못됐습니다: " + store.m);
+    throw new Error("API 오류 " + res.status + (detail ? " — " + detail : ""));
+  }
+  const data = await res.json();
+  return (data.content || [])
+    .filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+}
+
+/* ══════════ 환자 턴 ══════════ */
+function patientSystem(){
+  const k = S.kase;
+  const cues = k.cues.map(c => "- ["+c.id+"] "+c.reveal).join("\n");
+  return [
+    "You are role-playing a patient in a dental communication exam. Stay fully in character.",
+    "",
+    "CHARACTER",
+    k.patient.persona,
+    "",
+    "HIDDEN INFORMATION — reveal a line ONLY when the dentist asks a question that would",
+    "naturally draw it out. Never volunteer it. Never list several at once. If the dentist",
+    "asks nothing that touches an item, it stays hidden for the whole station.",
+    cues,
+    "",
+    "RULES",
+    "- Reply with the patient's spoken words only. No narration, no stage directions, no labels.",
+    "- One to three sentences. Speak the way a real person speaks, not in full paragraphs.",
+    "- If the dentist asks two things at once, answer only the one you noticed.",
+    "- If the dentist uses jargon, react like a layperson who did not follow it.",
+    "- Never coach, never grade, never break character, never mention the exam.",
+    "- If the dentist is warm, warm up a little. If dismissive, become shorter."
+  ].join("\n");
+}
+async function patientReply(){
+  const msgs = [];
+  msgs.push({ role:"user", content:"[The dentist greets you. Give your opening line.]" });
+  msgs.push({ role:"assistant", content:S.kase.patient.opening });
+  S.turns.forEach(t => {
+    if(t.role === "dr") msgs.push({ role:"user", content:t.text });
+    else if(t.text !== S.kase.patient.opening) msgs.push({ role:"assistant", content:t.text });
+  });
+  return claude(patientSystem(), msgs, 220);
+}
+
+async function submitTurn(text){
+  if(S.busy) return;
+  S.busy = true; $("mic").disabled = true;
+  S.turns.push({ role:"dr", text:text });
+  drawScript(); thinking(true);
+  try{
+    const reply = await patientReply();
+    thinking(false);
+    S.turns.push({ role:"pt", text:reply });
+    drawScript();
+    say(reply);
+  }catch(err){
+    thinking(false);
+    fail(err.message);
+  }finally{
+    S.busy = false; $("mic").disabled = false;
+  }
+}
+
+/* ══════════ 채점 ══════════ */
+function markerSystem(){
+  const k = S.kase;
+  const auto = k.rubric.domains.filter(d => d.autoScore !== false);
+  return [
+    "You are an ADC OSCE examiner marking a communication station from its transcript.",
+    "Mark strictly. Award marks only for what the candidate actually said.",
+    "",
+    "DOMAINS",
+    auto.map(d => "- "+d.id+" | "+d.name+" | out of "+d.max+" | "+d.descriptors).join("\n"),
+    "",
+    "CUES the patient held back. Mark a cue recovered only if the candidate asked something",
+    "that actually drew it out in the transcript.",
+    k.cues.map(c => "- "+c.id+" | "+c.label).join("\n"),
+    "",
+    "CRITICAL FAILS",
+    k.rubric.criticalFails.map(f => "- "+f).join("\n"),
+    "",
+    "Return JSON only. No prose, no code fences.",
+    "{",
+    '  "domains":[{"id":"","points":0,"comment":"한국어 한두 문장, 대본 속 실제 발화를 근거로"}],',
+    '  "cues":[{"id":"","recovered":true,"how":"대본 근거 또는 놓친 이유"}],',
+    '  "criticalFail":{"triggered":false,"which":"","why":""},',
+    '  "fixes":[{"said":"후보자가 실제로 말한 문장","better":"더 나은 영어 문장"}],',
+    '  "summary":"한국어 3~4문장. 무엇이 좋았고 다음에 무엇을 바꿔야 하는지."',
+    "}",
+    "Give three to six fixes, drawn from real lines in the transcript, not invented ones."
+  ].join("\n");
+}
+async function mark(){
+  const body = S.turns.map(t =>
+    (t.role === "dr" ? "DENTIST: " : "PATIENT: ") + t.text).join("\n");
+  const raw = await claude(markerSystem(),
+    [{ role:"user", content:"TRANSCRIPT\n\n"+body }], 2500);
+  const clean = raw.replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+  const a = clean.indexOf("{"), b = clean.lastIndexOf("}");
+  if(a < 0 || b < 0) throw new Error("채점 응답을 읽지 못했습니다.");
+  return JSON.parse(clean.slice(a, b+1));
+}
+
+function drawReport(r){
+  const k = S.kase;
+  const auto = k.rubric.domains.filter(d => d.autoScore !== false);
+  const self = k.rubric.domains.filter(d => d.autoScore === false);
+  const byId = {}; (r.domains||[]).forEach(d => byId[d.id] = d);
+
+  let got = 0, max = 0;
+  auto.forEach(d => { max += d.max; got += (byId[d.id] && byId[d.id].points) || 0; });
+
+  const cueById = {}; (r.cues||[]).forEach(c => cueById[c.id] = c);
+  const nGot = k.cues.filter(c => cueById[c.id] && cueById[c.id].recovered).length;
+
+  const cf = r.criticalFail || {};
+  let h = "";
+
+  h += '<div class="verdict'+(cf.triggered ? " fail" : "")+'">';
+  if(cf.triggered){
+    h += "<div><strong>Critical fail</strong></div>";
+    h += "<div class=note style='color:inherit'>"+esc(cf.which)+"<br>"+esc(cf.why)+"</div>";
+  } else {
+    h += '<span class="score">'+got+'</span><span class="of"> / '+max+"</span>";
+    h += '<div class="note">숨은 정보 '+nGot+" / "+k.cues.length+" 회수 · 발화 "+
+         S.turns.filter(t=>t.role==="dr").length+"턴</div>";
+  }
+  h += "</div>";
+
+  h += "<h2>도메인</h2>";
+  auto.forEach(d => {
+    const g = byId[d.id] || {};
+    h += '<div class="dom"><div class="head"><span class="name">'+esc(d.name)+"</span>" +
+         '<span class="pts">'+(g.points!=null?g.points:"–")+" / "+d.max+"</span></div>" +
+         '<div class="note">'+esc(g.comment||"")+"</div></div>";
+  });
+  self.forEach(d => {
+    h += '<div class="dom selfcheck"><div class="head"><span class="name">'+esc(d.name)+"</span></div>" +
+         '<div class="note">'+esc(d.descriptors)+"</div></div>";
+  });
+
+  h += "<h2>숨은 정보</h2><ul class=cuelist>";
+  k.cues.forEach(c => {
+    const g = cueById[c.id] || {};
+    h += "<li class="+(g.recovered?"got":"miss")+">"+esc(c.label) +
+         (g.how ? '<div class="note">'+esc(g.how)+"</div>" : "") + "</li>";
+  });
+  h += "</ul>";
+
+  if(r.fixes && r.fixes.length){
+    h += "<h2>고칠 문장</h2>";
+    r.fixes.forEach(f => {
+      h += '<div class="fix"><div class="said">'+esc(f.said)+"</div>" +
+           '<div class="better">'+esc(f.better)+"</div></div>";
+    });
+  }
+  if(r.summary) h += "<h2>총평</h2><p>"+esc(r.summary)+"</p>";
+
+  h += "<h2>대본</h2>";
+  S.turns.forEach(t => {
+    h += '<div class="turn '+(t.role==="dr"?"dr":"pt")+'"><div class="who">' +
+         (t.role==="dr" ? "Dentist" : esc(k.patient.name)) +
+         '</div><div class="said">'+esc(t.text)+"</div></div>";
+  });
+
+  $("report").innerHTML = h;
+}
+
+/* ══════════ 타이머 ══════════ */
+function runRead(){
+  let left = S.kase.readSeconds || 180;
+  const total = left;
+  $("readClock").textContent = mmss(left);
+  $("readClock").className = "timerbig";
+  setClock(0, "");
+  S.readT = setInterval(() => {
+    left--;
+    $("readClock").textContent = mmss(left);
+    setClock(1 - left/total, left <= 30 ? "warn" : "");
+    if(left <= 30) $("readClock").className = "timerbig warn";
+    if(left <= 0){ clearInterval(S.readT); enterStation(); }
+  }, 1000);
+}
+function runStation(){
+  S.stnLeft = S.kase.stationSeconds || 600;
+  const total = S.stnLeft;
+  const tick = () => {
+    $("stnClock").textContent = mmss(S.stnLeft);
+    const st = S.stnLeft <= 0 ? "over" : (S.stnLeft <= 120 ? "warn" : "");
+    setClock(1 - Math.max(0,S.stnLeft)/total, st);
+    $("stnClock").className = "timerbig " + st;
+    if(S.stnLeft <= 0){
+      $("stnLabel").textContent = "시간 종료 — 마무리하고 채점하세요";
+      clearInterval(S.stnT);
+    }
+    S.stnLeft--;
+  };
+  tick();
+  S.stnT = setInterval(tick, 1000);
+}
+
+/* ══════════ 흐름 ══════════ */
+function enterStation(){
+  clearInterval(S.readT);
+  show("s-station");
+  S.turns = [{ role:"pt", text:S.kase.patient.opening }];
+  drawScript();
+  runStation();
+  say(S.kase.patient.opening);
+}
+
+$("go").onclick = () => {
+  const key = $("key").value.trim();
+  if(!key){ fail("API 키를 넣으세요."); return; }
+  store.k = key;
+  store.m = $("model").value.trim() || "claude-sonnet-5";
+  S.kase = S.cases[+$("caseSel").value];
+  if(!S.kase){ fail("케이스가 없습니다."); return; }
+  primeVoice();
+
+  const c = S.kase.cueCard;
+  $("briefStation").textContent = S.kase.station || "Communication station";
+  $("briefTitle").textContent = S.kase.title;
+  $("briefSetting").textContent = c.setting || "";
+  $("briefPatient").textContent = c.patient || "";
+  $("briefTasks").innerHTML = (c.tasks||[]).map(t => "<li>"+esc(t)+"</li>").join("");
+
+  show("s-brief");
+  runRead();
+};
+
+$("enter").onclick = () => { primeVoice(); enterStation(); };
+$("mic").onclick = () => { primeVoice(); listen(); };
+$("typeIn").onclick = typeTurn;
+$("repeat").onclick = () => { if(S.speaking) say(S.speaking); };
+
+$("finish").onclick = async () => {
+  if(S.listening){ try{ S.recog.stop(); }catch(e){} }
+  speechSynthesis && speechSynthesis.cancel();
+  clearInterval(S.stnT);
+  if(S.turns.filter(t => t.role === "dr").length === 0){
+    fail("아직 말한 게 없습니다."); return;
+  }
+  $("finish").disabled = true; $("finish").textContent = "채점 중…";
+  try{
+    const r = await mark();
+    drawReport(r);
+    setClock(0, "");
+    show("s-report");
+  }catch(err){
+    fail(err.message);
+  }finally{
+    $("finish").disabled = false; $("finish").textContent = "끝내고 채점";
+  }
+};
+
+$("again").onclick = () => { setClock(0,""); show("s-setup"); };
+
+$("openImport").onclick = () => $("importBox").classList.toggle("hide");
+$("doImport").onclick = () => {
+  try{
+    const v = JSON.parse($("importJson").value);
+    const add = Array.isArray(v) ? v : [v];
+    add.forEach(c => {
+      if(!c.id || !c.patient || !c.cues || !c.rubric)
+        throw new Error("id, patient, cues, rubric 이 모두 필요합니다.");
+    });
+    store.packs = store.packs.filter(p => !add.some(a => a.id === p.id)).concat(add);
+    loadCases();
+    $("importJson").value = "";
+    $("importBox").classList.add("hide");
+  }catch(e){ fail("JSON을 읽지 못했습니다: " + e.message); }
+};
+
+/* 시작 */
+$("key").value = store.k;
+$("model").value = store.m;
+loadCases();
+if(canSpeak) speechSynthesis.onvoiceschanged = () => {};
+</script>
+</body>
+</html>
