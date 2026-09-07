@@ -220,60 +220,226 @@
 /* ══════════ 케이스 팩 ══════════
    아래는 형식을 보여주기 위한 임시 케이스입니다.
    실제 Divya / Warriors 케이스로 교체해서 쓰세요. */
-const BUILTIN = [{
-  id: "demo-ortho",
-  title: "Orthodontic referral request",
-  station: "Communication station · 10 minutes",
-  readSeconds: 180,
-  stationSeconds: 600,
-  cueCard: {
-    setting: "You are a general dentist in a suburban practice in Australia.",
-    patient: "Jordan, 15, attends with no parent present. Jordan asks to be referred to an orthodontist for clear aligners.",
-    tasks: [
-      "Take a relevant history.",
-      "Explain your findings and what is possible today.",
-      "Agree a plan with the patient."
-    ]
+const BUILTIN = [
+{
+ "id": "amalgam_mercury_poisoning_concern",
+ "title": "Amalgam 교체 상담 — Mercury poisoning 우려와 심미 개선 요구 (Mrs. Williamson)",
+ "station": "Communication station · 10 minutes",
+ "readSeconds": 180,
+ "stationSeconds": 600,
+ "cueCard": {
+  "setting": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
+  "patient": "",
+  "tasks": [
+   "Address the patient concern about mercury in amalgam fillings and discuss all the management options, including doing nothing, with costs."
+  ]
+ },
+ "patient": {
+  "name": "Mrs. Williamson",
+  "voiceHint": "en-AU",
+  "opening": "Yes doctor. I have had these silver fillings for a very long time. I am in a new relationship now. My partner said he can see this ugly colour when I smile. So I started looking online. I was shocked. These fillings have mercury in them. I may have been poisoning myself for years. My old dentist never told me this.",
+  "persona": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
+  "sampleLines": [
+   "Honestly, both. His comment started it. But now I keep looking in the mirror. I do not like the colour either.",
+   "I googled it. It was all there. Are you telling me the information is not true?",
+   "But I have so many fillings. And they have been in my mouth for many years. Surely that is a risk?",
+   "I read a World Health Organization article. That is a verified source, doctor.",
+   "Then why is it banned in some countries? That does not sound safe to me.",
+   "What kind of measures? Inside this clinic?",
+   "And if you take mine out? You said removal is one of the risky times.",
+   "Alright. That does make me feel a bit better.",
+   "No, nothing like that.",
+   "No. They have never given me trouble. It is only this new worry.",
+   "I am not really sure. Maybe?",
+   "Actually yes. And I have been told before that I grind at night.",
+   "My GP has put me on e-cigarettes.",
+   "I am a bit of a foodie. So all of that applies to me.",
+   "I have a rather large smile though. When I smile I can see almost all my lower teeth. So I think they all need changing.",
+   "Can I just have that first material on all the teeth? It sounds affordable.",
+   "And this very big one here? What about that tooth?"
+  ]
+ },
+ "cues": [
+  {
+   "id": "C1",
+   "hidden": "교체를 원하는 진짜 이유는 새 파트너가 미소에서 보이는 색이 보기 흉하다고 말한 것",
+   "when": "오프닝 우려 청취 구간",
+   "probe": "Can you tell me more about your concern?"
   },
-  patient: {
-    name: "Jordan",
-    voiceHint: "en-AU",
-    persona:
-      "You are Jordan, 15 years old, Australian, here alone without a parent. " +
-      "You are keen, a bit impatient, and you have seen aligner ads on social media. " +
-      "You speak in short casual sentences. You are not medically trained.",
-    opening: "Hi. So I want to get my teeth straightened. Can you refer me to someone?"
+  {
+   "id": "C2",
+   "hidden": "수은 정보는 온라인 검색(Google)에서 얻었고, 이전 치과의사는 한 번도 말해주지 않았다",
+   "when": "오프닝 우려 청취 구간",
+   "probe": "Where did you hear about the mercury?"
   },
-  cues: [
-    { id:"c1", label:"부모/보호자 동의 문제를 꺼냄", reveal:"If asked who came with you: you came alone, mum was working and doesn't know you booked." },
-    { id:"c2", label:"무엇이 신경 쓰이는지(구체적 치아) 확인", reveal:"If asked what bothers you: the two upper front teeth stick out and you hate photos." },
-    { id:"c3", label:"기간·비용 기대치 확인", reveal:"If asked about expectations: you think it takes about three months and costs a couple hundred dollars." },
-    { id:"c4", label:"소셜미디어/온라인 aligner 사용 여부", reveal:"If asked where you heard about it: an online brand that mails aligners; you nearly ordered a kit." },
-    { id:"c5", label:"구강위생 습관", reveal:"If asked: you brush once a day, no floss, and drink two energy drinks a day." },
-    { id:"c6", label:"외상 이력", reveal:"If asked about injury: you chipped a front tooth playing footy two years ago, never checked." },
-    { id:"c7", label:"의과적 병력 / 복용약", reveal:"If asked: mild asthma, blue puffer as needed. Nothing else." },
-    { id:"c8", label:"이 방문에 대한 기대(오늘 시작 가능한지)", reveal:"If asked: you were hoping to start today." }
-  ],
-  rubric: {
-    domains: [
-      { id:"demeanour", name:"Demeanour", max:8, autoScore:false,
-        descriptors:"Warmth, eye contact, pace, non-judgemental manner. Cannot be judged from a transcript." },
-      { id:"language", name:"Use of language", max:8,
-        descriptors:"Plain English, no unexplained jargon, short sentences, checks understanding." },
-      { id:"communication", name:"Effective communication", max:8,
-        descriptors:"Open questions first, one question at a time, listens and follows the patient's cues, empathy where warranted." },
-      { id:"organisation", name:"Organisation", max:8,
-        descriptors:"Logical order, signposting, covers history then findings then plan within the time." },
-      { id:"decision", name:"Joint decision making", max:8,
-        descriptors:"Offers options with pros and cons, checks what the patient wants, agrees a concrete next step." }
-    ],
-    criticalFails: [
-      "Agreeing to treat or refer a minor without addressing parental consent",
-      "Endorsing direct-to-consumer aligners without examination",
-      "Giving a guarantee of outcome or duration"
-    ]
+  {
+   "id": "C3",
+   "hidden": "현재 통증, 시림, 불편감, 음식 끼임은 전혀 없다",
+   "when": "증상 확인 구간",
+   "probe": "Do you have any pain from these fillings?"
+  },
+  {
+   "id": "C4",
+   "hidden": "미소가 커서 아래 치아까지 다 보이므로 전부 교체하고 싶어한다",
+   "when": "옵션 논의 구간",
+   "probe": "Which teeth show when you smile?"
+  },
+  {
+   "id": "C5",
+   "hidden": "GP가 처방해서 현재 e-cigarette을 사용 중이다",
+   "when": "습관 확인 구간",
+   "probe": "Do you smoke or vape at all?"
+  },
+  {
+   "id": "C6",
+   "hidden": "과거에 이갈이가 있다는 말을 들은 적이 있다",
+   "when": "습관 확인 구간",
+   "probe": "Do you think you grind your teeth?"
+  },
+  {
+   "id": "C7",
+   "hidden": "먹는 것을 즐기는 foodie로 tea, coffee, red wine 등 다양하게 섭취한다",
+   "when": "습관 확인 구간",
+   "probe": "Do you drink tea or coffee often?"
+  },
+  {
+   "id": "C8",
+   "hidden": "모든 설명을 들은 뒤에도 마음을 정했고 전부 교체하기를 원한다",
+   "when": "마무리 결정 구간",
+   "probe": "Have you had a think about the options?"
   }
-}];
+ ],
+ "rubric": {
+  "domains": [
+   {
+    "id": "A",
+    "name": "Communication",
+    "max": 8,
+    "items": [
+     {
+      "no": "A1",
+      "criterion": "파트너의 코멘트로 상처받은 감정을 먼저 인정하고, filling 색과 무관하게 미소가 아름답다고 안심시켰는가 (예: I am sorry your partner said that. Your smile is still beautiful.)"
+     },
+     {
+      "no": "A2",
+      "criterion": "환자가 온라인에서 읽은 내용을 부정하거나 반박하지 않고, 수은이 있다는 사실 자체는 인정하며 접근했는가 (I will not deny there is mercury in the fillings)"
+     },
+     {
+      "no": "A3",
+      "criterion": "흡연/vaping, grinding 등 습관을 물을 때 심문하거나 판단하는 어조를 쓰지 않았는가 (중립적 톤, 20년 흡연에도 '오케이' 하고 넘어감)"
+     },
+     {
+      "no": "A4",
+      "criterion": "최종적으로 환자가 마음을 정했을 때 존중하고, 결정을 틀렸다고 느끼게 하지 않았는가"
+     }
+    ]
+   },
+   {
+    "id": "B",
+    "name": "Information Gathering",
+    "max": 10,
+    "items": [
+     {
+      "no": "B1",
+      "criterion": "교체를 원하는 동기가 본인의 뜻인지 파트너의 코멘트 때문인지 먼저 확인했는가 (Do you want them changed, or is it because of your partner?)"
+     },
+     {
+      "no": "B2",
+      "criterion": "수은 정보를 어디서 들었는지 출처를 물었는가 (Where did you hear that from?)"
+     },
+     {
+      "no": "B3",
+      "criterion": "PST - pain, sensitivity, discomfort 를 각 filling에 대해 확인했는가"
+     },
+     {
+      "no": "B4",
+      "criterion": "grinding 또는 clenching 습관을 물었고, 모른다고 할 때 아침 근육 뻐근함/동거인이 소리를 듣는지 등 후속 질문을 했는가"
+     },
+     {
+      "no": "B5",
+      "criterion": "staining 관련 요인(흡연/vaping, tea, coffee, 착색 음식)을 시간 낭비 없이 확인했는가"
+     }
+    ]
+   },
+   {
+    "id": "C",
+    "name": "Diagnosis",
+    "max": 8,
+    "items": [
+     {
+      "no": "C1",
+      "criterion": "현재 amalgam fillings에 임상적 문제가 없고 요구는 순수하게 심미적임을 명확히 정리했는가"
+     },
+     {
+      "no": "C2",
+      "criterion": "OPG(전악 방사선사진) 옆에 서서 치아를 직접 가리키며 filling 크기를 평가했는가 (examiner가 먼저 묻게 만들지 않았는가)"
+     },
+     {
+      "no": "C3",
+      "criterion": "작은 filling은 composite, marginal ridge/cusp가 관여된 중등도는 inlay/onlay, 매우 큰 것은 crown으로 치아별 판단을 제시했는가"
+     },
+     {
+      "no": "C4",
+      "criterion": "grinding 병력을 심미 수복물의 강도 문제와 연결지어 진단적으로 해석했는가"
+     }
+    ]
+   },
+   {
+    "id": "D",
+    "name": "Management",
+    "max": 10,
+    "items": [
+     {
+      "no": "D1",
+      "criterion": "수은 노출은 filling을 mixing/placing 할 때와 제거할 때만 발생하고, 구강 내 결합 상태에서는 노출이 거의 없다고 설명했는가 (환경 수은 노출과 비교 포함)"
+     },
+     {
+      "no": "D2",
+      "criterion": "일부 국가의 금지 이유가 폐기물 처리 시스템 부재에 따른 환경 문제이며, 호주는 엄격한 disposal 규정(suction trap, 별도 수거통)을 갖췄다고 설명했는가"
+     },
+     {
+      "no": "D3",
+      "criterion": "SMART protocol(Safe Mercury Amalgam Removal Technique)을 이름 뜻까지 포함해 설명하고, 보호 bib, 보호 안경, nasal oxygen mask, rubber dam 격리, chunk 제거, 충분한 물과 high volume suction을 언급했는가"
+     },
+     {
+      "no": "D4",
+      "criterion": "do nothing 포함 모든 옵션(composite, inlay/onlay, crown)을 제시하고 각각 대략적 비용을 dollars로 말했는가 (composite 250+, inlay/onlay 700+, crown 1800+, grinder면 zirconia 300-400 추가)"
+     },
+     {
+      "no": "D5",
+      "criterion": "교체하지 않도록 설득을 시도했는가 - 큰 후방 filling 제거 시 신경에 가까워져 root canal 등 더 큰 치료로 갈 위험, 그리고 grinder라서 white filling이 자주 깨진다는 두 가지 근거 제시"
+     },
+     {
+      "no": "D6",
+      "criterion": "당일에는 clean만 하고, 정보를 인쇄해 주며 다음 방문에 결정하도록 연기했는가 (충동적 결정 방지)"
+     }
+    ]
+   },
+   {
+    "id": "E",
+    "name": "Health Promotion & Professionalism",
+    "max": 4,
+    "items": [
+     {
+      "no": "E1",
+      "criterion": "WHO 또는 Australian Dental Association 자료/브로슈어 등 근거 기반 자료를 제공하겠다고 했는가"
+     },
+     {
+      "no": "E2",
+      "criterion": "composite 착색 관리를 위해 6개월마다 polishing이 필요하다고 안내했는가, 그리고 grinder에게 night guard(splint)를 제안했는가"
+     }
+    ]
+   }
+  ],
+  "criticalFails": [
+   "환자가 문제가 없고 순수 심미 목적일 때 교체하지 않아도 된다고 설득하는 대화를 아예 시도하지 않은 경우 - 이 유형 케이스의 1순위 탈락 사유",
+   "모든 옵션과 장단점을 설명한 뒤에도 환자가 원할 때 윤리적이지 않다며 거부하거나 second opinion으로 넘기는 경우",
+   "흡연/음주/습관을 물을 때 판단하는 어조로 환자가 자신의 습관에 대해 기분 나쁘게 느끼도록 만든 경우",
+   "staining 예시를 들 때 curry를 언급하는 것 - 인종차별로 간주됨"
+  ]
+ }
+}
+];
 
 /* ══════════ 상태 ══════════ */
 const S = {
@@ -452,7 +618,8 @@ async function claude(system, messages, maxTokens){
     body: JSON.stringify({
       model: store.m,
       max_tokens: maxTokens || 400,
-      system: system,
+      system: [{ type:"text", text:system,
+                 cache_control:{ type:"ephemeral" } }],
       messages: messages
     })
   });
@@ -472,25 +639,33 @@ async function claude(system, messages, maxTokens){
 /* ══════════ 환자 턴 ══════════ */
 function patientSystem(){
   const k = S.kase;
-  const cues = k.cues.map(c => "- ["+c.id+"] "+c.reveal).join("\n");
+  const cues = k.cues.map(c => "- ["+c.id+"] "+(c.hidden||c.reveal)+
+     (c.probe ? "   (drawn out by: "+c.probe+")" : "")).join("\n");
+  const style = (k.patient.sampleLines||[]).length
+    ? "\n\nHOW THIS PATIENT TALKS — real lines from this character. Match this voice,\n" +
+      "this vocabulary and this level of pushback. Do not reuse them word for word.\n" +
+      k.patient.sampleLines.map(l => "- "+l).join("\n")
+    : "";
   return [
     "You are role-playing a patient in a dental communication exam. Stay fully in character.",
     "",
-    "CHARACTER",
+    "WHO YOU ARE",
     k.patient.persona,
     "",
-    "HIDDEN INFORMATION — reveal a line ONLY when the dentist asks a question that would",
-    "naturally draw it out. Never volunteer it. Never list several at once. If the dentist",
-    "asks nothing that touches an item, it stays hidden for the whole station.",
+    "HIDDEN INFORMATION — the notes below are written in Korean for the examiner.",
+    "Never speak Korean. Reveal an item ONLY when the dentist asks something that would",
+    "naturally draw it out, and say it in your own English. Never volunteer it. Never give",
+    "several at once. If nothing the dentist asks touches an item, it stays hidden.",
     cues,
+    style,
     "",
     "RULES",
-    "- Reply with the patient's spoken words only. No narration, no stage directions, no labels.",
-    "- One to three sentences. Speak the way a real person speaks, not in full paragraphs.",
-    "- If the dentist asks two things at once, answer only the one you noticed.",
-    "- If the dentist uses jargon, react like a layperson who did not follow it.",
+    "- Reply with spoken words only. No narration, no labels, no stage directions.",
+    "- One to three sentences. Talk like a real person, not in paragraphs.",
+    "- Two questions at once: answer only the one you noticed.",
+    "- Jargon: react like a layperson who did not follow it.",
     "- Never coach, never grade, never break character, never mention the exam.",
-    "- If the dentist is warm, warm up a little. If dismissive, become shorter."
+    "- Warm dentist, you warm up. Dismissive dentist, you get shorter."
   ].join("\n");
 }
 async function patientReply(){
@@ -526,30 +701,32 @@ async function submitTurn(text){
 /* ══════════ 채점 ══════════ */
 function markerSystem(){
   const k = S.kase;
-  const auto = k.rubric.domains.filter(d => d.autoScore !== false);
+  const doms = k.rubric.domains.map(d =>
+    "["+d.id+"] "+d.name+" — "+d.max+"점\n" +
+    (d.items||[]).map(i => "   "+i.no+". "+i.criterion).join("\n")).join("\n\n");
   return [
-    "You are an ADC OSCE examiner marking a communication station from its transcript.",
-    "Mark strictly. Award marks only for what the candidate actually said.",
+    "당신은 ADC Part 2 OSCE 채점관입니다. 대본에 실제로 나온 발화만 근거로 채점하세요.",
+    "각 항목은 2점(충분히 수행) / 1점(부분 수행) / 0점(미수행)입니다. 후하게 주지 마세요.",
     "",
-    "DOMAINS",
-    auto.map(d => "- "+d.id+" | "+d.name+" | out of "+d.max+" | "+d.descriptors).join("\n"),
+    "채점 항목",
+    doms,
     "",
-    "CUES the patient held back. Mark a cue recovered only if the candidate asked something",
-    "that actually drew it out in the transcript.",
-    k.cues.map(c => "- "+c.id+" | "+c.label).join("\n"),
+    "Cue Recovery — 환자가 물어야만 공개하는 정보. 후보자의 질문이 실제로 그것을",
+    "끌어냈을 때만 회수로 인정하세요.",
+    k.cues.map(c => "["+c.id+"] "+(c.hidden||c.reveal)).join("\n"),
     "",
-    "CRITICAL FAILS",
-    k.rubric.criticalFails.map(f => "- "+f).join("\n"),
+    "Critical Fail — 하나라도 해당하면 불합격",
+    k.rubric.criticalFails.map((f,i) => (i+1)+". "+f).join("\n"),
     "",
-    "Return JSON only. No prose, no code fences.",
+    "JSON만 출력하세요. 설명도 코드펜스도 붙이지 마세요.",
     "{",
-    '  "domains":[{"id":"","points":0,"comment":"한국어 한두 문장, 대본 속 실제 발화를 근거로"}],',
-    '  "cues":[{"id":"","recovered":true,"how":"대본 근거 또는 놓친 이유"}],',
-    '  "criticalFail":{"triggered":false,"which":"","why":""},',
-    '  "fixes":[{"said":"후보자가 실제로 말한 문장","better":"더 나은 영어 문장"}],',
-    '  "summary":"한국어 3~4문장. 무엇이 좋았고 다음에 무엇을 바꿔야 하는지."',
+    ' "domains":[{"id":"A","items":[{"no":"A1","points":0,"why":"대본 근거 한 문장"}]}],',
+    ' "cues":[{"id":"C1","recovered":true,"how":"대본 근거 또는 놓친 이유"}],',
+    ' "criticalFail":{"triggered":false,"which":"","why":""},',
+    ' "fixes":[{"said":"후보자가 실제로 말한 문장","better":"더 나은 영어 문장"}],',
+    ' "summary":"한국어 3~4문장."',
     "}",
-    "Give three to six fixes, drawn from real lines in the transcript, not invented ones."
+    "fixes는 3~6개, 반드시 대본에 실제로 있는 문장에서 고르세요."
   ].join("\n");
 }
 async function mark(){
@@ -565,46 +742,50 @@ async function mark(){
 
 function drawReport(r){
   const k = S.kase;
-  const auto = k.rubric.domains.filter(d => d.autoScore !== false);
-  const self = k.rubric.domains.filter(d => d.autoScore === false);
-  const byId = {}; (r.domains||[]).forEach(d => byId[d.id] = d);
-
-  let got = 0, max = 0;
-  auto.forEach(d => { max += d.max; got += (byId[d.id] && byId[d.id].points) || 0; });
-
+  const gotD = {}; (r.domains||[]).forEach(d => gotD[d.id] = d);
   const cueById = {}; (r.cues||[]).forEach(c => cueById[c.id] = c);
   const nGot = k.cues.filter(c => cueById[c.id] && cueById[c.id].recovered).length;
 
-  const cf = r.criticalFail || {};
-  let h = "";
+  let got = 0, max = 0;
+  k.rubric.domains.forEach(d => {
+    max += d.max;
+    const g = gotD[d.id] || {};
+    (g.items||[]).forEach(i => got += (i.points || 0));
+  });
 
-  h += '<div class="verdict'+(cf.triggered ? " fail" : "")+'">';
+  const cf = r.criticalFail || {};
+  let h = '<div class="verdict'+(cf.triggered ? " fail" : "")+'">';
   if(cf.triggered){
     h += "<div><strong>Critical fail</strong></div>";
-    h += "<div class=note style='color:inherit'>"+esc(cf.which)+"<br>"+esc(cf.why)+"</div>";
+    h += '<div class="note" style="color:inherit">'+esc(cf.which)+"<br>"+esc(cf.why)+"</div>";
   } else {
     h += '<span class="score">'+got+'</span><span class="of"> / '+max+"</span>";
-    h += '<div class="note">숨은 정보 '+nGot+" / "+k.cues.length+" 회수 · 발화 "+
+    h += '<div class="note">숨은 정보 '+nGot+" / "+k.cues.length+" 회수 · 발화 " +
          S.turns.filter(t=>t.role==="dr").length+"턴</div>";
   }
   h += "</div>";
 
-  h += "<h2>도메인</h2>";
-  auto.forEach(d => {
-    const g = byId[d.id] || {};
-    h += '<div class="dom"><div class="head"><span class="name">'+esc(d.name)+"</span>" +
-         '<span class="pts">'+(g.points!=null?g.points:"–")+" / "+d.max+"</span></div>" +
-         '<div class="note">'+esc(g.comment||"")+"</div></div>";
-  });
-  self.forEach(d => {
-    h += '<div class="dom selfcheck"><div class="head"><span class="name">'+esc(d.name)+"</span></div>" +
-         '<div class="note">'+esc(d.descriptors)+"</div></div>";
+  k.rubric.domains.forEach(d => {
+    const g = gotD[d.id] || {};
+    const byNo = {}; (g.items||[]).forEach(i => byNo[i.no] = i);
+    const sub = (g.items||[]).reduce((a,i) => a + (i.points||0), 0);
+    h += '<div class="dom"><div class="head"><span class="name">'+esc(d.id+". "+d.name) +
+         '</span><span class="pts">'+sub+" / "+d.max+"</span></div>";
+    (d.items||[]).forEach(it => {
+      const s2 = byNo[it.no] || {};
+      h += '<div class="note" style="margin-top:8px"><strong>'+esc(it.no)+" · " +
+           (s2.points!=null ? s2.points : "–")+"점</strong> — "+esc(it.criterion);
+      if(s2.why) h += "<br>"+esc(s2.why);
+      h += "</div>";
+    });
+    h += "</div>";
   });
 
   h += "<h2>숨은 정보</h2><ul class=cuelist>";
   k.cues.forEach(c => {
     const g = cueById[c.id] || {};
-    h += "<li class="+(g.recovered?"got":"miss")+">"+esc(c.label) +
+    h += "<li class="+(g.recovered?"got":"miss")+">"+esc(c.hidden||c.reveal||c.label) +
+         (c.probe ? '<div class="note">유도 질문: '+esc(c.probe)+"</div>" : "") +
          (g.how ? '<div class="note">'+esc(g.how)+"</div>" : "") + "</li>";
   });
   h += "</ul>";
@@ -624,7 +805,6 @@ function drawReport(r){
          (t.role==="dr" ? "Dentist" : esc(k.patient.name)) +
          '</div><div class="said">'+esc(t.text)+"</div></div>";
   });
-
   $("report").innerHTML = h;
 }
 
@@ -777,7 +957,7 @@ $("openImport").onclick = () => $("importBox").classList.toggle("hide");$("doImp
     const v = JSON.parse($("importJson").value);
     const add = Array.isArray(v) ? v : [v];
     add.forEach(c => {
-      if(!c.id || !c.patient || !c.cues || !c.rubric)
+      if(!c.id || !c.patient || !c.cues || !c.rubric || !c.rubric.domains)
         throw new Error("id, patient, cues, rubric 이 모두 필요합니다.");
     });
     store.packs = store.packs.filter(p => !add.some(a => a.id === p.id)).concat(add);
