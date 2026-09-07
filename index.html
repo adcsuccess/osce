@@ -188,6 +188,23 @@
   <label for="caseSel">케이스</label>
   <select id="caseSel"></select>
 
+  <label for="engine">환자 목소리</label>
+  <select id="engine">
+    <option value="tts">브라우저 기본 — 무료</option>
+    <option value="11">ElevenLabs — 크레딧 사용</option>
+  </select>
+
+  <div id="elBox" class="hide">
+    <label for="elKey">ElevenLabs API 키</label>
+    <input type="password" id="elKey" placeholder="계정 → Profile → API Key" autocomplete="off">
+    <button class="btn ghost" id="elLoad">목소리 불러오기</button>
+    <div id="elVoiceWrap" class="hide">
+      <label for="elVoice">목소리</label>
+      <select id="elVoice"></select>
+    </div>
+    <p class="note">호출이 실패하면 기본 음성으로 자동 전환됩니다. 연습은 안 끊깁니다.</p>
+  </div>
+
   <label for="rate">환자 말 속도</label>
   <select id="rate">
     <option value="0.95">느리게</option>
@@ -578,6 +595,14 @@ const store = {
   set m(v){ try{ localStorage.setItem("osce.model", v); }catch(e){} },
   get r(){ try{ return parseFloat(localStorage.getItem("osce.rate")) || 1.3; }catch(e){ return 1.3; } },
   set r(v){ try{ localStorage.setItem("osce.rate", v); }catch(e){} },
+  get eng(){ try{ return localStorage.getItem("osce.engine") || "tts"; }catch(e){ return "tts"; } },
+  set eng(v){ try{ localStorage.setItem("osce.engine", v); }catch(e){} },
+  get elk(){ try{ return localStorage.getItem("osce.elkey") || ""; }catch(e){ return ""; } },
+  set elk(v){ try{ localStorage.setItem("osce.elkey", v); }catch(e){} },
+  get elv(){ try{ return localStorage.getItem("osce.elvoice") || ""; }catch(e){ return ""; } },
+  set elv(v){ try{ localStorage.setItem("osce.elvoice", v); }catch(e){} },
+  get elvn(){ try{ return localStorage.getItem("osce.elvname") || ""; }catch(e){ return ""; } },
+  set elvn(v){ try{ localStorage.setItem("osce.elvname", v); }catch(e){} },
   get packs(){ try{ return JSON.parse(localStorage.getItem("osce.packs") || "[]"); }catch(e){ return []; } },
   set packs(v){ try{ localStorage.setItem("osce.packs", JSON.stringify(v)); }catch(e){} }
 };
@@ -637,22 +662,62 @@ function pickVoice(vs, hint){
       || null;
 }
 
-async function say(text){
-  if(!canSpeak || !text) return;
-  S.speaking = text;
+let elAudio = null;
+
+function browserSay(text){
+  if(!canSpeak) return;
   const hint = (S.kase && S.kase.patient && S.kase.patient.voiceHint) || "en-AU";
-
-  if(!voiceCache){
-    const vs = await voicesReady();
-    voiceCache = pickVoice(vs, hint);
-  }
-
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = hint;                        // 음성을 못 찾아도 한국어로는 안 읽게
+  u.lang = hint;
   if(voiceCache) u.voice = voiceCache;
   u.rate = store.r; u.pitch = 1.0;
   speechSynthesis.speak(u);
+}
+
+async function elevenSay(text){
+  const key = store.elk, vid = store.elv;
+  if(!key || !vid) throw new Error("ElevenLabs 설정이 비어 있습니다.");
+  const res = await fetch(
+    "https://api.elevenlabs.io/v1/text-to-speech/" + encodeURIComponent(vid),
+    { method:"POST",
+      headers:{ "xi-api-key":key, "content-type":"application/json", "accept":"audio/mpeg" },
+      body: JSON.stringify({
+        text: text,
+        model_id: "eleven_turbo_v2_5",
+        voice_settings:{ stability:0.4, similarity_boost:0.75, style:0.35 }
+      }) });
+  if(!res.ok){
+    if(res.status === 401) throw new Error("ElevenLabs 키가 거부됐습니다.");
+    if(res.status === 429) throw new Error("ElevenLabs 크레딧이 부족합니다.");
+    throw new Error("ElevenLabs 오류 " + res.status);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+  elAudio = new Audio(url);
+  elAudio.playbackRate = store.r;
+  elAudio.onended = () => URL.revokeObjectURL(url);
+  await elAudio.play();
+}
+
+async function say(text){
+  if(!text) return;
+  S.speaking = text;
+  if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+  speechSynthesis && speechSynthesis.cancel();
+
+  if(!voiceCache && canSpeak){
+    const vs = await voicesReady();
+    voiceCache = pickVoice(vs, (S.kase && S.kase.patient && S.kase.patient.voiceHint) || "en-AU");
+  }
+
+  if(store.eng === "11"){
+    try{ await elevenSay(text); return; }
+    catch(e){
+      if(!S.elWarned){ S.elWarned = true; fail(e.message + " 기본 음성으로 계속합니다."); }
+    }
+  }
+  browserSay(text);
 }
 
 function listen(){
@@ -1047,6 +1112,16 @@ $("go").onclick = () => {
   store.k = key;
   store.m = $("model").value.trim() || "claude-sonnet-5";
   store.r = parseFloat($("rate").value) || 1.3;
+  store.eng = $("engine").value;
+  if(store.eng === "11"){
+    store.elk = $("elKey").value.trim();
+    const sel = $("elVoice");
+    if(sel && sel.value){ store.elv = sel.value; store.elvn = sel.options[sel.selectedIndex].text; }
+    if(!store.elk || !store.elv){
+      fail("ElevenLabs 키를 넣고 목소리를 고르거나, 브라우저 기본으로 바꾸세요."); return;
+    }
+  }
+  S.elWarned = false;
   S.kase = S.cases[+$("caseSel").value];
   if(!S.kase){ fail("케이스가 없습니다."); return; }
   primeVoice();
@@ -1135,6 +1210,44 @@ $("finish").onclick = async () => {
 
 $("again").onclick = () => { setClock(0,""); show("s-setup"); };
 
+/* ── ElevenLabs ── */
+function toggleEl(){
+  $("elBox").classList.toggle("hide", $("engine").value !== "11");
+}
+$("engine").onchange = toggleEl;
+
+$("elLoad").onclick = async () => {
+  const key = $("elKey").value.trim();
+  if(!key){ fail("ElevenLabs 키를 넣으세요."); return; }
+  store.elk = key;
+  const btn = $("elLoad");
+  btn.disabled = true; btn.textContent = "불러오는 중…";
+  try{
+    const res = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100",
+                            { headers:{ "xi-api-key": key } });
+    if(!res.ok) throw new Error(res.status === 401 ? "키가 거부됐습니다." : "오류 " + res.status);
+    const data = await res.json();
+    const vs = data.voices || [];
+    if(!vs.length) throw new Error("목소리가 하나도 없습니다.");
+    vs.sort((a,b) => {
+      const au = v => /austral/i.test((v.labels && v.labels.accent) || "") ? 0 : 1;
+      return au(a) - au(b) || (a.name||"").localeCompare(b.name||"");
+    });
+    $("elVoice").innerHTML = vs.map(v => {
+      const lab = (v.labels||{});
+      const tag = [lab.accent, lab.gender, lab.age].filter(Boolean).join(" · ");
+      return '<option value="'+esc(v.voice_id)+'">'+esc(v.name) +
+             (tag ? " — "+esc(tag) : "") + "</option>";
+    }).join("");
+    if(store.elv) $("elVoice").value = store.elv;
+    $("elVoiceWrap").classList.remove("hide");
+    btn.textContent = vs.length + "개 불러옴 — 다시 불러오기";
+  }catch(e){
+    fail("목소리를 불러오지 못했습니다: " + e.message);
+    btn.textContent = "목소리 불러오기";
+  }finally{ btn.disabled = false; }
+};
+
 $("openImport").onclick = () => $("importBox").classList.toggle("hide");$("doImport").onclick = () => {
   try{
     const v = JSON.parse($("importJson").value);
@@ -1154,6 +1267,13 @@ $("openImport").onclick = () => $("importBox").classList.toggle("hide");$("doImp
 $("key").value = store.k;
 $("model").value = store.m;
 $("rate").value = String(store.r);
+$("engine").value = store.eng;
+$("elKey").value = store.elk;
+toggleEl();
+if(store.eng === "11" && store.elv){
+  $("elVoice").innerHTML = '<option value="'+esc(store.elv)+'">'+esc(store.elvn||"저장된 목소리")+"</option>";
+  $("elVoiceWrap").classList.remove("hide");
+}
 loadCases();
 if(canSpeak) voicesReady().then(vs => { voiceCache = pickVoice(vs, "en-AU"); });
 </script>
