@@ -153,6 +153,14 @@
   <label for="caseSel">케이스</label>
   <select id="caseSel"></select>
 
+  <label for="rate">환자 말 속도</label>
+  <select id="rate">
+    <option value="0.95">느리게</option>
+    <option value="1.15">보통</option>
+    <option value="1.3" selected>빠르게 — 실전에 가까움</option>
+    <option value="1.45">아주 빠르게</option>
+  </select>
+
   <label for="model">모델</label>
   <input type="text" id="model" value="claude-sonnet-5">
 
@@ -473,6 +481,8 @@ const store = {
   set k(v){ try{ localStorage.setItem("osce.key", v); }catch(e){} },
   get m(){ try{ return localStorage.getItem("osce.model") || "claude-sonnet-5"; }catch(e){ return "claude-sonnet-5"; } },
   set m(v){ try{ localStorage.setItem("osce.model", v); }catch(e){} },
+  get r(){ try{ return parseFloat(localStorage.getItem("osce.rate")) || 1.3; }catch(e){ return 1.3; } },
+  set r(v){ try{ localStorage.setItem("osce.rate", v); }catch(e){} },
   get packs(){ try{ return JSON.parse(localStorage.getItem("osce.packs") || "[]"); }catch(e){ return []; } },
   set packs(v){ try{ localStorage.setItem("osce.packs", JSON.stringify(v)); }catch(e){} }
 };
@@ -546,7 +556,7 @@ async function say(text){
   const u = new SpeechSynthesisUtterance(text);
   u.lang = hint;                        // 음성을 못 찾아도 한국어로는 안 읽게
   if(voiceCache) u.voice = voiceCache;
-  u.rate = 1.0; u.pitch = 1.0;
+  u.rate = store.r; u.pitch = 1.0;
   speechSynthesis.speak(u);
 }
 
@@ -919,6 +929,7 @@ $("go").onclick = () => {
   if(!key){ fail("API 키를 넣으세요."); return; }
   store.k = key;
   store.m = $("model").value.trim() || "claude-sonnet-5";
+  store.r = parseFloat($("rate").value) || 1.3;
   S.kase = S.cases[+$("caseSel").value];
   if(!S.kase){ fail("케이스가 없습니다."); return; }
   primeVoice();
@@ -1007,6 +1018,7 @@ $("openImport").onclick = () => $("importBox").classList.toggle("hide");$("doImp
 /* 시작 */
 $("key").value = store.k;
 $("model").value = store.m;
+$("rate").value = String(store.r);
 loadCases();
 if(canSpeak) voicesReady().then(vs => { voiceCache = pickVoice(vs, "en-AU"); });
 </script>
