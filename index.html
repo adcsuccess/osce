@@ -559,7 +559,7 @@ const BUILTIN = [
 const S = {
   cases: [], caseIx: 0, kase: null,
   turns: [],            // {role:'dr'|'pt', text}
-  recog: null, listening: false, want: false, buffer: "",
+  recog: null, listening: false, want: false, buffer: "", silT: null,
   readT: null, stnT: null, stnLeft: 0,
   speaking: null, busy: false
 };
@@ -723,8 +723,9 @@ async function say(text){
 function listen(){
   if(!SR){ typeTurn(); return; }
 
-  if(S.listening){                      // 두 번째 탭 = 끝내고 전송
+  if(S.listening){                      // 두 번째 탭 = 기다리지 않고 즉시 전송
     S.want = false;
+    clearTimeout(S.silT);
     try{ S.recog.stop(); }catch(e){}
     return;
   }
@@ -733,6 +734,18 @@ function listen(){
   S.want = true;
   S.buffer = "";
   startRecog();
+}
+
+const SILENCE_MS = 1600;               // 이만큼 조용하면 말이 끝난 것으로 본다
+
+function armSilence(){
+  clearTimeout(S.silT);
+  S.silT = setTimeout(() => {
+    if(S.want && S.buffer.trim()){      // 뭔가 말했고 아직 듣는 중이면 전송
+      S.want = false;
+      try{ S.recog.stop(); }catch(e){}
+    }
+  }, SILENCE_MS);
 }
 
 function startRecog(){
@@ -746,7 +759,8 @@ function startRecog(){
   r.onstart = () => {
     S.listening = true;
     $("mic").classList.add("live");
-    $("mic").textContent = "듣는 중 — 다 말하면 다시 탭";
+    $("mic").textContent = "듣는 중 — 멈추면 자동 전송";
+    armSilence();
   };
 
   r.onresult = e => {
@@ -756,6 +770,7 @@ function startRecog(){
       if(e.results[i].isFinal) S.buffer += t + " "; else interim += t;
     }
     drawInterim(S.buffer + interim);
+    armSilence();                      // 말이 이어지는 동안 계속 미룬다
   };
 
   r.onerror = e => {
@@ -771,6 +786,7 @@ function startRecog(){
   };
 
   r.onend = () => {
+    clearTimeout(S.silT);
     if(S.want){                         // iOS가 멋대로 끊은 것 — 다시 켠다
       setTimeout(() => { if(S.want){ try{ startRecog(); }catch(e){ S.want = false; } } }, 200);
       return;
@@ -1162,6 +1178,7 @@ $("repeat").onclick = () => { if(S.speaking) say(S.speaking); };
 
 $("finish").onclick = async () => {
   S.want = false;
+  clearTimeout(S.silT);
   if(S.listening){ try{ S.recog.stop(); }catch(e){} }
   speechSynthesis && speechSynthesis.cancel();
   clearInterval(S.stnT);
