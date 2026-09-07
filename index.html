@@ -73,12 +73,47 @@
   .cue p{margin:0 0 12px; font-size:16px; line-height:1.6}
   .cue ol{margin:0; padding-left:20px}
   .cue ol li{margin-bottom:8px; line-height:1.55}
+  .cue .ci{font-family:var(--sans); font-size:11.5px; letter-spacing:.09em;
+           color:var(--ink-soft); margin-bottom:16px}
+  .cue .who2{font-size:17px; font-weight:600; margin:0 0 3px}
+  .cue .cc{font-style:italic; margin:0 0 18px; color:var(--ink)}
+  .cue .sec{font-family:var(--sans); font-size:11.5px; font-weight:700;
+            letter-spacing:.05em; color:var(--teal); margin:15px 0 5px}
+  .cue ul{margin:0; padding-left:19px}
+  .cue ul li{margin-bottom:5px; line-height:1.5}
+  .cue .tasklab{font-family:var(--sans); font-size:11.5px; font-weight:700;
+                letter-spacing:.05em; margin:20px 0 8px; padding-top:14px;
+                border-top:1px solid var(--rule)}
 
   .timerbig{font-family:var(--serif); font-size:44px; letter-spacing:.02em;
             font-variant-numeric:tabular-nums; margin:22px 0 0}
   .timerbig.warn{color:var(--amber)}
   .timerbig.over{color:var(--red)}
   .timerlabel{font-size:13px; color:var(--ink-soft); margin-top:2px}
+
+  /* pinned card + clock */
+  #pin{position:sticky; top:3px; z-index:40; background:var(--paper);
+       border-bottom:1px solid var(--rule); margin:0 -20px; padding:0 20px 8px}
+  .pinbar{display:flex; align-items:baseline; gap:10px; padding:10px 0 8px}
+  .pinclock{font-family:var(--serif); font-size:27px; font-variant-numeric:tabular-nums;
+            line-height:1}
+  .pinclock.warn{color:var(--amber)} .pinclock.over{color:var(--red)}
+  .pinname{flex:1; font-size:13.5px; color:var(--ink-soft); overflow:hidden;
+           white-space:nowrap; text-overflow:ellipsis}
+  #fold{font-size:12.5px; color:var(--teal); border:1px solid var(--rule);
+        border-radius:3px; padding:6px 10px; background:var(--card); white-space:nowrap}
+  #pinCard{background:var(--card); border:1px solid var(--rule); border-top:3px solid var(--ink);
+           padding:14px 15px; font-family:var(--serif); font-size:14.5px; line-height:1.5;
+           max-height:38vh; overflow-y:auto; -webkit-overflow-scrolling:touch}
+  #pinCard.folded{display:none}
+  #pinCard .cc{font-style:italic; margin:0 0 11px}
+  #pinCard .sec{font-family:var(--sans); font-size:10.5px; font-weight:700;
+                letter-spacing:.05em; color:var(--teal); margin:11px 0 3px}
+  #pinCard ul,#pinCard ol{margin:0; padding-left:17px}
+  #pinCard li{margin-bottom:3px}
+  #pinCard .tasklab{font-family:var(--sans); font-size:10.5px; font-weight:700;
+                    letter-spacing:.05em; margin:13px 0 5px; padding-top:10px;
+                    border-top:1px solid var(--rule)}
 
   /* transcript — exam record, not chat bubbles */
   #script{margin:8px 0 0}
@@ -181,9 +216,9 @@
 <section id="s-brief" class="stage">
   <div class="cue">
     <div class="stationline" id="briefStation"></div>
-    <h3 id="briefTitle"></h3>
-    <p id="briefSetting"></p>
-    <p id="briefPatient"></p>
+    <div class="ci">CANDIDATE INSTRUCTIONS</div>
+    <div id="briefBody"></div>
+    <div class="tasklab">TASK</div>
     <ol id="briefTasks"></ol>
   </div>
   <div class="timerbig" id="readClock">3:00</div>
@@ -194,8 +229,14 @@
 
 <!-- ─────────── STATION ─────────── -->
 <section id="s-station" class="stage">
-  <div class="timerbig" id="stnClock">10:00</div>
-  <div class="timerlabel" id="stnLabel">남은 시간</div>
+  <div id="pin">
+    <div class="pinbar">
+      <span class="pinclock" id="stnClock">10:00</span>
+      <span class="pinname" id="pinName"></span>
+      <button id="fold">카드 접기</button>
+    </div>
+    <div id="pinCard"></div>
+  </div>
   <div id="script"></div>
   <div class="micbar">
     <button id="mic">탭하고 말하기</button>
@@ -226,18 +267,24 @@ const BUILTIN = [
 {
  "id": "amalgam_mercury_poisoning_concern",
  "title": "Amalgam 교체 상담 — Mercury poisoning 우려와 심미 개선 요구 (Mrs. Williamson)",
- "station": "Communication station · 10 minutes",
+ "station": "OSCE Station 32 · 10 minutes",
  "readSeconds": 180,
  "stationSeconds": 600,
  "cueCard": {
   "setting": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
   "patient": "",
   "tasks": [
-   "Address the patient concern about mercury in amalgam fillings and discuss all the management options, including doing nothing, with costs."
+   "Address the mercury poisoning concern with evidence based reassurance.",
+   "Explain why amalgam is banned in some countries.",
+   "Explain the SMART protocol for safe amalgam removal.",
+   "Ask about pain, sensitivity, discomfort, grinding and staining habits.",
+   "Discuss all options including doing nothing, composite, inlay, onlay and crown with rough costs, using the OPG.",
+   "Try to convince her she does not have to replace healthy fillings just because someone made a comment.",
+   "If she still insists, agree to do it once she understands the pros and cons."
   ]
  },
  "patient": {
-  "name": "Mrs. Williamson",
+  "name": "Mrs. Chen",
   "voiceHint": "en-AU",
   "opening": "Yes doctor. I have had these silver fillings for a very long time. I am in a new relationship now. My partner said he can see this ugly colour when I smile. So I started looking online. I was shocked. These fillings have mercury in them. I may have been poisoning myself for years. My old dentist never told me this.",
   "persona": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
@@ -438,6 +485,54 @@ const BUILTIN = [
    "모든 옵션과 장단점을 설명한 뒤에도 환자가 원할 때 윤리적이지 않다며 거부하거나 second opinion으로 넘기는 경우",
    "흡연/음주/습관을 물을 때 판단하는 어조로 환자가 자신의 습관에 대해 기분 나쁘게 느끼도록 만든 경우",
    "staining 예시를 들 때 curry를 언급하는 것 - 인종차별로 간주됨"
+  ]
+ },
+ "stationNo": 32,
+ "card": {
+  "station": 32,
+  "patient": "Mrs. Chen — adult female",
+  "complaint": "I want these silver fillings out — I've read the mercury is dangerous.",
+  "sections": [
+   {
+    "heading": "History",
+    "items": [
+     "Attended for a check-up and clean.",
+     "Wants amalgams replaced with tooth-coloured fillings (partner read they are harmful); dislikes the colour.",
+     "Reports some hair loss and worsening eyesight."
+    ]
+   },
+   {
+    "heading": "Social history",
+    "items": [
+     "Smoker (or vaper)."
+    ]
+   },
+   {
+    "heading": "Medical history",
+    "items": [
+     "Nil relevant."
+    ]
+   },
+   {
+    "heading": "Clinical findings on examination",
+    "items": [
+     "Multiple amalgam restorations, largely intact margins",
+     "No secondary caries on the fillings in question",
+     "Possible occlusal wear / signs of grinding"
+    ]
+   },
+   {
+    "heading": "Provided to you",
+    "items": [
+     "Intraoral photographs",
+     "Radiographs (bitewings)"
+    ]
+   }
+  ],
+  "tasks": [
+   "Take a relevant history",
+   "Explain your findings to the patient",
+   "Discuss management options"
   ]
  }
 }
@@ -903,11 +998,8 @@ function runStation(){
     $("stnClock").textContent = mmss(S.stnLeft);
     const st = S.stnLeft <= 0 ? "over" : (S.stnLeft <= 120 ? "warn" : "");
     setClock(1 - Math.max(0,S.stnLeft)/total, st);
-    $("stnClock").className = "timerbig " + st;
-    if(S.stnLeft <= 0){
-      $("stnLabel").textContent = "시간 종료 — 마무리하고 채점하세요";
-      clearInterval(S.stnT);
-    }
+    $("stnClock").className = "pinclock " + st;
+    if(S.stnLeft <= 0){ clearInterval(S.stnT); }
     S.stnLeft--;
   };
   tick();
@@ -915,9 +1007,34 @@ function runStation(){
 }
 
 /* ══════════ 흐름 ══════════ */
+function buildPinned(){
+  const k = S.kase, card = k.card;
+  $("pinName").textContent = card ? card.patient : (k.title || "");
+  let h = "";
+  if(card){
+    if(card.complaint) h += '<p class="cc">\u201C'+esc(card.complaint)+"\u201D</p>";
+    (card.sections||[]).forEach(sec => {
+      if(!sec.items || !sec.items.length) return;
+      h += '<div class="sec">'+esc(sec.heading.toUpperCase())+"</div><ul>" +
+           sec.items.map(i => "<li>"+esc(i)+"</li>").join("") + "</ul>";
+    });
+    h += '<div class="tasklab">TASK</div><ol>' +
+         (card.tasks||[]).map(t => "<li>"+esc(t)+"</li>").join("") + "</ol>";
+  } else {
+    const c = k.cueCard || {};
+    h += "<p>"+esc(c.setting||"")+"</p>";
+    h += '<div class="tasklab">TASK</div><ol>' +
+         (c.tasks||[]).map(t => "<li>"+esc(t)+"</li>").join("") + "</ol>";
+  }
+  $("pinCard").innerHTML = h;
+  $("pinCard").classList.add("folded");          // 실전처럼 기본은 접힌 상태
+  $("fold").textContent = "카드 펴기";
+}
+
 function enterStation(){
   clearInterval(S.readT);
   show("s-station");
+  buildPinned();
   S.turns = [{ role:"pt", text:S.kase.patient.opening }];
   drawScript();
   runStation();
@@ -934,12 +1051,26 @@ $("go").onclick = () => {
   if(!S.kase){ fail("케이스가 없습니다."); return; }
   primeVoice();
 
-  const c = S.kase.cueCard;
-  $("briefStation").textContent = S.kase.station || "Communication station";
-  $("briefTitle").textContent = S.kase.title;
-  $("briefSetting").textContent = c.setting || "";
-  $("briefPatient").textContent = c.patient || "";
-  $("briefTasks").innerHTML = (c.tasks||[]).map(t => "<li>"+esc(t)+"</li>").join("");
+  const card = S.kase.card;
+  $("briefStation").textContent = S.kase.station || "Communication station · 10 minutes";
+
+  let bh = "";
+  if(card){
+    bh += '<p class="who2">'+esc(card.patient)+"</p>";
+    if(card.complaint) bh += '<p class="cc">\u201C'+esc(card.complaint)+"\u201D</p>";
+    (card.sections||[]).forEach(sec => {
+      if(!sec.items || !sec.items.length) return;
+      bh += '<div class="sec">'+esc(sec.heading.toUpperCase())+"</div><ul>" +
+            sec.items.map(i => "<li>"+esc(i)+"</li>").join("") + "</ul>";
+    });
+    $("briefTasks").innerHTML = (card.tasks||[]).map(t => "<li>"+esc(t)+"</li>").join("");
+  } else {
+    const c = S.kase.cueCard || {};
+    bh += "<p>"+esc(c.setting||"")+"</p>";
+    if(c.patient) bh += "<p>"+esc(c.patient)+"</p>";
+    $("briefTasks").innerHTML = (c.tasks||[]).map(t => "<li>"+esc(t)+"</li>").join("");
+  }
+  $("briefBody").innerHTML = bh;
 
   show("s-brief");
   runRead();
@@ -947,6 +1078,10 @@ $("go").onclick = () => {
 
 $("enter").onclick = () => { primeVoice(); enterStation(); };
 $("mic").onclick = () => { primeVoice(); listen(); };
+$("fold").onclick = () => {
+  const c = $("pinCard"), folded = c.classList.toggle("folded");
+  $("fold").textContent = folded ? "카드 펴기" : "카드 접기";
+};
 $("typeIn").onclick = typeTurn;
 $("repeat").onclick = () => { if(S.speaking) say(S.speaking); };
 
