@@ -445,7 +445,7 @@ const BUILTIN = [
 const S = {
   cases: [], caseIx: 0, kase: null,
   turns: [],            // {role:'dr'|'pt', text}
-  recog: null, listening: false,
+  recog: null, listening: false, want: false, buffer: "",
   readT: null, stnT: null, stnLeft: 0,
   speaking: null, busy: false
 };
@@ -469,7 +469,8 @@ function fail(msg){
   const d = document.createElement("div");
   d.className = "err"; d.textContent = msg;
   document.querySelector(".stage.on").prepend(d);
-  setTimeout(() => d.remove(), 9000);
+  d.scrollIntoView({block:"center"});
+  setTimeout(() => d.remove(), 12000);
 }
 
 /* ══════════ 저장 ══════════ */
@@ -508,65 +509,119 @@ let voicePrimed = false;
 function primeVoice(){                       // iOS는 사용자 조작 안에서 한 번 깨워야 함
   if(voicePrimed || !canSpeak) return;
   const u = new SpeechSynthesisUtterance(" ");
-  u.volume = 0; speechSynthesis.speak(u); voicePrimed = true;
+  u.lang = "en-AU"; u.volume = 0;
+  speechSynthesis.speak(u);
+  voicePrimed = true;
+  voicesReady().then(vs => { voiceCache = pickVoice(vs, "en-AU"); });
 }
-function pickVoice(hint){
-  const vs = speechSynthesis.getVoices();
-  return vs.find(v => v.lang === (hint||"en-AU"))
-      || vs.find(v => v.lang && v.lang.startsWith("en-AU"))
-      || vs.find(v => v.lang && v.lang.startsWith("en-GB"))
-      || vs.find(v => v.lang && v.lang.startsWith("en"))
+let voiceCache = null;
+
+function voicesReady(){                 // 목록이 채워질 때까지 기다린다
+  return new Promise(res => {
+    if(!canSpeak) return res([]);
+    const now = speechSynthesis.getVoices();
+    if(now && now.length) return res(now);
+    let done = false;
+    const finish = () => { if(!done){ done = true; res(speechSynthesis.getVoices()||[]); } };
+    speechSynthesis.onvoiceschanged = finish;
+    setTimeout(finish, 1500);           // 그래도 안 오면 포기하고 진행
+  });
+}
+
+function pickVoice(vs, hint){
+  hint = hint || "en-AU";
+  const base = hint.split("-")[0];
+  return vs.find(v => v.lang && v.lang.replace("_","-") === hint)
+      || vs.find(v => v.lang && v.lang.replace("_","-").startsWith("en-AU"))
+      || vs.find(v => v.lang && v.lang.replace("_","-").startsWith("en-GB"))
+      || vs.find(v => v.lang && v.lang.startsWith(base))
       || null;
 }
-function say(text){
-  if(!canSpeak) return;
+
+async function say(text){
+  if(!canSpeak || !text) return;
+  S.speaking = text;
+  const hint = (S.kase && S.kase.patient && S.kase.patient.voiceHint) || "en-AU";
+
+  if(!voiceCache){
+    const vs = await voicesReady();
+    voiceCache = pickVoice(vs, hint);
+  }
+
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  const v = pickVoice(S.kase && S.kase.patient && S.kase.patient.voiceHint);
-  if(v) u.voice = v;
+  u.lang = hint;                        // 음성을 못 찾아도 한국어로는 안 읽게
+  if(voiceCache) u.voice = voiceCache;
   u.rate = 1.0; u.pitch = 1.0;
-  S.speaking = text;
   speechSynthesis.speak(u);
 }
 
 function listen(){
   if(!SR){ typeTurn(); return; }
-  if(S.listening){ try{ S.recog.stop(); }catch(e){} return; }
-  speechSynthesis && speechSynthesis.cancel();
 
+  if(S.listening){                      // 두 번째 탭 = 끝내고 전송
+    S.want = false;
+    try{ S.recog.stop(); }catch(e){}
+    return;
+  }
+
+  speechSynthesis && speechSynthesis.cancel();
+  S.want = true;
+  S.buffer = "";
+  startRecog();
+}
+
+function startRecog(){
   const r = new SR();
   r.lang = "en-AU";
   r.interimResults = true;
-  r.continuous = false;            // iOS에서는 어차피 무시됨
+  r.continuous = true;                  // 안드로이드는 이걸로 계속 듣는다
   r.maxAlternatives = 1;
   S.recog = r;
 
-  let finalText = "";
-  r.onstart = () => { S.listening = true; $("mic").classList.add("live");
-                      $("mic").textContent = "듣는 중 — 다 말하면 탭"; };
+  r.onstart = () => {
+    S.listening = true;
+    $("mic").classList.add("live");
+    $("mic").textContent = "듣는 중 — 다 말하면 다시 탭";
+  };
+
   r.onresult = e => {
     let interim = "";
     for(let i = e.resultIndex; i < e.results.length; i++){
       const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal) finalText += t + " "; else interim += t;
+      if(e.results[i].isFinal) S.buffer += t + " "; else interim += t;
     }
-    drawInterim(finalText + interim);
+    drawInterim(S.buffer + interim);
   };
+
   r.onerror = e => {
-    if(e.error === "not-allowed")
-      fail("마이크 권한이 거부됐습니다. 브라우저 설정에서 이 사이트의 마이크를 허용하세요.");
-    else if(e.error !== "aborted" && e.error !== "no-speech")
+    if(e.error === "not-allowed"){
+      S.want = false;
+      fail("마이크 권한이 거부됐습니다. 사파리 설정에서 허용하세요.");
+    } else if(e.error === "no-speech"){
+      /* 조용했을 뿐 — onend 에서 알아서 다시 켠다 */
+    } else if(e.error !== "aborted"){
+      S.want = false;
       fail("음성인식 오류: " + e.error);
+    }
   };
+
   r.onend = () => {
+    if(S.want){                         // iOS가 멋대로 끊은 것 — 다시 켠다
+      setTimeout(() => { if(S.want){ try{ startRecog(); }catch(e){ S.want = false; } } }, 200);
+      return;
+    }
     S.listening = false;
     $("mic").classList.remove("live");
     $("mic").textContent = "탭하고 말하기";
     clearInterim();
-    const said = finalText.trim();
+    const said = S.buffer.trim();
+    S.buffer = "";
     if(said) submitTurn(said);
   };
-  try{ r.start(); }catch(e){ fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 보세요."); }
+
+  try{ r.start(); }
+  catch(e){ S.want = false; fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 보세요."); }
 }
 
 function typeTurn(){
@@ -729,15 +784,29 @@ function markerSystem(){
     "fixes는 3~6개, 반드시 대본에 실제로 있는 문장에서 고르세요."
   ].join("\n");
 }
+function parseVerdict(raw){
+  let t = raw.replace(/^```(?:json)?/i,"").replace(/```\s*$/,"").trim();
+  const i = t.indexOf("{"), j = t.lastIndexOf("}");
+  if(i < 0) throw new Error("JSON 없음");
+  t = t.slice(i, j > i ? j+1 : undefined);
+  try{ return JSON.parse(t); }
+  catch(e){
+    // 잘린 응답을 살려본다: 열린 괄호를 닫아준다
+    let fixed = t.replace(/,\s*$/,"");
+    const open = (fixed.match(/{/g)||[]).length - (fixed.match(/}/g)||[]).length;
+    const arr  = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
+    fixed += "]".repeat(Math.max(0,arr)) + "}".repeat(Math.max(0,open));
+    return JSON.parse(fixed);
+  }
+}
+
 async function mark(){
   const body = S.turns.map(t =>
     (t.role === "dr" ? "DENTIST: " : "PATIENT: ") + t.text).join("\n");
   const raw = await claude(markerSystem(),
-    [{ role:"user", content:"TRANSCRIPT\n\n"+body }], 2500);
-  const clean = raw.replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
-  const a = clean.indexOf("{"), b = clean.lastIndexOf("}");
-  if(a < 0 || b < 0) throw new Error("채점 응답을 읽지 못했습니다.");
-  return JSON.parse(clean.slice(a, b+1));
+    [{ role:"user", content:"대본\n\n"+body }], 8000);
+  S.lastRaw = raw;
+  return parseVerdict(raw);
 }
 
 function drawReport(r){
@@ -877,23 +946,51 @@ $("typeIn").onclick = typeTurn;
 $("repeat").onclick = () => { if(S.speaking) say(S.speaking); };
 
 $("finish").onclick = async () => {
+  S.want = false;
   if(S.listening){ try{ S.recog.stop(); }catch(e){} }
   speechSynthesis && speechSynthesis.cancel();
   clearInterval(S.stnT);
+
   if(S.turns.filter(t => t.role === "dr").length === 0){
     fail("아직 말한 게 없습니다."); return;
   }
-  $("finish").disabled = true; $("finish").textContent = "채점 중…";
-  try{
-    const r = await mark();
-    drawReport(r);
-    setClock(0, "");
-    show("s-report");
-  }catch(err){
-    fail(err.message);
-  }finally{
-    $("finish").disabled = false; $("finish").textContent = "끝내고 채점";
+
+  const btn = $("finish");
+  btn.disabled = true;
+  btn.textContent = "채점 중… 30초쯤";
+
+  let verdict = null, lastErr = null;
+  for(let attempt = 1; attempt <= 2; attempt++){
+    try{ verdict = await mark(); break; }
+    catch(e){
+      lastErr = e;
+      if(attempt === 1) btn.textContent = "다시 시도 중…";
+    }
   }
+
+  btn.disabled = false;
+  btn.textContent = "끝내고 채점";
+
+  if(verdict){
+    try{ drawReport(verdict); setClock(0,""); show("s-report"); return; }
+    catch(e){ lastErr = e; }
+  }
+
+  // 채점 실패 — 대본만은 절대 잃지 않는다
+  const script = S.turns.map(t =>
+    (t.role==="dr" ? "Dentist: " : S.kase.patient.name+": ") + t.text).join("\n\n");
+  $("report").innerHTML =
+    '<div class="err">채점에 실패했습니다: ' + esc(lastErr ? lastErr.message : "알 수 없음") +
+    "</div><p class=note>대본은 아래에 그대로 있습니다. 복사해서 저와의 대화에 붙여넣으면 채점해 드릴 수 있습니다.</p>" +
+    '<button class="btn ghost" id="copyScript">대본 복사</button>' +
+    '<textarea id="rawScript" style="margin-top:14px;min-height:260px">' + esc(script) + "</textarea>";
+  setClock(0,""); show("s-report");
+  const cb = $("copyScript");
+  if(cb) cb.onclick = () => {
+    const ta = $("rawScript"); ta.select();
+    try{ document.execCommand("copy"); cb.textContent = "복사됨"; }
+    catch(e){ cb.textContent = "직접 길게 눌러 복사하세요"; }
+  };
 };
 
 $("again").onclick = () => { setClock(0,""); show("s-setup"); };
@@ -971,7 +1068,7 @@ $("openImport").onclick = () => $("importBox").classList.toggle("hide");$("doImp
 $("key").value = store.k;
 $("model").value = store.m;
 loadCases();
-if(canSpeak) speechSynthesis.onvoiceschanged = () => {};
+if(canSpeak) voicesReady().then(vs => { voiceCache = pickVoice(vs, "en-AU"); });
 </script>
 </body>
 </html>
