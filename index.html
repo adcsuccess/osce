@@ -425,6 +425,48 @@ function migrateOldPacks(){
   return n;
 }
 
+/* 목차에 모듈 정보가 빠져 있으면 저장된 케이스를 읽어 다시 만든다 */
+async function fetchVoices(key){
+  const tries = [
+    "https://api.elevenlabs.io/v2/voices?page_size=100",
+    "https://api.elevenlabs.io/v1/voices"        // 구버전 — v2 가 400 이면 이쪽
+  ];
+  let last = "";
+  for(const url of tries){
+    let res;
+    try{ res = await fetch(url, { headers:{ "xi-api-key": key } }); }
+    catch(e){ last = "네트워크 오류"; continue; }
+    if(res.ok){
+      const vs = (await res.json()).voices || [];
+      if(vs.length) return vs;
+      last = "목소리가 하나도 없습니다.";
+      continue;
+    }
+    if(res.status === 401){
+      throw new Error("키가 거부됐습니다. 만료됐거나 Voices 읽기 권한이 없습니다.");
+    }
+    last = "오류 " + res.status;
+  }
+  throw new Error(last || "불러오지 못했습니다.");
+}
+
+function repairIndex(){
+  const ids = store.idx();
+  if(!ids.length) return 0;
+  const needs = ids.some(m => !m.moduleName || !m.code);
+  if(!needs) return 0;
+  let fixed = 0;
+  const rebuilt = ids.map(m => {
+    if(m.moduleName && m.code) return m;
+    const full = store.load(m.id);
+    if(!full) return m;
+    fixed++;
+    return store.meta(full);
+  });
+  try{ localStorage.setItem(PFX+"index", JSON.stringify(rebuilt)); }catch(e){}
+  return fixed;
+}
+
 function loadCases(){
   S.metas = BUILTIN.map(store.meta).concat(store.idx());
   $("caseSel").innerHTML = S.metas.length
@@ -1090,11 +1132,7 @@ $("elLoad").onclick = async () => {
   const btn = $("elLoad");
   btn.disabled = true; btn.textContent = "불러오는 중…";
   try{
-    const res = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100",
-                            { headers:{ "xi-api-key": key } });
-    if(!res.ok) throw new Error(res.status === 401 ? "키가 거부됐습니다." : "오류 " + res.status);
-    const data = await res.json();
-    const vs = data.voices || [];
+    const vs = await fetchVoices(key);
     if(!vs.length) throw new Error("목소리가 하나도 없습니다.");
     vs.sort((a,b) => {
       const au = v => /austral/i.test((v.labels && v.labels.accent) || "") ? 0 : 1;
@@ -1141,6 +1179,7 @@ $("key").value = store.k;
 $("model").value = store.m;
 $("rate").value = String(store.r);
 migrateOldPacks();
+try{ repairIndex(); }catch(e){}
 $("endmode").value = store.end;
 $("engine").value = store.eng;
 $("elKey").value = store.elk;
