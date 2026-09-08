@@ -205,7 +205,7 @@ const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
 
 const S = { metas:[], kase:null, step:0, i:0, playing:false, veil:true };
 
-const PFX = "study.";
+const PFX = "osce.";   // 케이스는 롤플레이 앱과 같은 곳에 둔다 (같은 주소라 공유됨)
 const store = {
   idx(){
     try{
@@ -245,12 +245,12 @@ const store = {
   set rate(v){ try{ localStorage.setItem("study.rate", v); }catch(e){} },
   get eng(){ try{ return localStorage.getItem("study.engine")||"tts"; }catch(e){ return "tts"; } },
   set eng(v){ try{ localStorage.setItem("study.engine", v); }catch(e){} },
-  get elk(){ try{ return localStorage.getItem("study.elkey")||""; }catch(e){ return ""; } },
-  set elk(v){ try{ localStorage.setItem("study.elkey", v); }catch(e){} },
-  get elv(){ try{ return localStorage.getItem("study.elvoice")||""; }catch(e){ return ""; } },
-  set elv(v){ try{ localStorage.setItem("study.elvoice", v); }catch(e){} },
-  get elvn(){ try{ return localStorage.getItem("study.elvname")||""; }catch(e){ return ""; } },
-  set elvn(v){ try{ localStorage.setItem("study.elvname", v); }catch(e){} },
+  get elk(){ try{ return localStorage.getItem("osce.elkey")||""; }catch(e){ return ""; } },
+  set elk(v){ try{ localStorage.setItem("osce.elkey", v); }catch(e){} },
+  get elv(){ try{ return localStorage.getItem("osce.elvoice")||""; }catch(e){ return ""; } },
+  set elv(v){ try{ localStorage.setItem("osce.elvoice", v); }catch(e){} },
+  get elvn(){ try{ return localStorage.getItem("osce.elvname")||""; }catch(e){ return ""; } },
+  set elvn(v){ try{ localStorage.setItem("osce.elvname", v); }catch(e){} },
   prog(id){ try{ return parseInt(localStorage.getItem("study.p."+id)||"0",10); }catch(e){ return 0; } },
   setProg(id,v){ try{ localStorage.setItem("study.p."+id, String(v)); }catch(e){} }
 };
@@ -372,6 +372,13 @@ function takeCase(i){
   return built || store.load(m.id);
 }
 function drawSteps(){
+  if(!S.kase){
+    $("steps").innerHTML =
+      '<div class="step"><div class="n">·</div><div><div class="t">케이스가 없습니다</div>' +
+      '<div class="d">아래 “케이스 불러오기”로 JSON을 넣으면 단계가 나타납니다.</div></div></div>';
+    $("barFill").style.width = "0%";
+    return;
+  }
   const done = store.prog(S.kase.id);
   $("steps").innerHTML = STEPS.map(s => {
     const cls = s.id < done ? "done" : (s.id === done ? "next" : "");
@@ -384,7 +391,8 @@ function drawSteps(){
   $("barFill").style.width = (done/STEPS.length*100)+"%";
 }
 function pickCase(){
-  S.kase = takeCase(+$("caseSel").value);
+  const v = $("caseSel").value;
+  S.kase = v === "" ? null : takeCase(+v);
   drawSteps();
 }
 
@@ -418,7 +426,7 @@ function turns(){ return (S.kase.study && S.kase.study.turns) || []; }
 function drTurns(){ return turns().filter(t => t.who === "dr"); }
 
 function start(step){
-  if(!S.kase) return;
+  if(!S.kase){ alert("케이스를 먼저 넣으세요."); return; }
   if(step === 4){ location.href = "index.html"; return; }
   if(step <= 2 && !turns().length){
     alert("이 케이스에는 스크립트가 없습니다. 변환을 다시 해보세요."); return;
@@ -557,10 +565,11 @@ function runCues(){
   voicesReady().then(vs => { voiceCache = pickVoice(vs); });
   $("rate").value = String(store.rate);
   $("rate").onchange = () => store.rate = parseFloat($("rate").value)||1.2;
-  migrateOldPacks();
-  loadCases();
+  $("openImport").onclick = () => $("importBox").classList.toggle("hide");
   $("caseSel").onchange = pickCase;
-  pickCase();
+  try{ migrateOldPacks(); }catch(e){}
+  try{ loadCases(); pickCase(); }
+  catch(e){ alert("케이스 목록을 읽지 못했습니다: " + e.message); }
 
   /* ElevenLabs 설정 */
   const toggleEl = () => $("elBox").classList.toggle("hide", $("engine").value !== "11");
@@ -607,7 +616,7 @@ function runCues(){
     }finally{ btn.disabled = false; }
   };
 
-  $("reset").onclick = () => { store.setProg(S.kase.id, 0); drawSteps(); };
+  $("reset").onclick = () => { if(!S.kase) return; store.setProg(S.kase.id, 0); drawSteps(); };
   $("openImport").onclick = () => $("importBox").classList.toggle("hide");
   $("doImport").onclick = () => {
     let add;
