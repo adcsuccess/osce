@@ -37,6 +37,11 @@
   textarea{min-height:120px;font-size:14px}
   .note{font-size:13px;color:var(--ink-soft);margin-top:10px;line-height:1.5}
   .hide{display:none}
+  .recbar{display:flex;gap:8px;margin-top:14px}
+  .recbar button{flex:1;padding:12px;border:1px solid var(--rule);border-radius:3px;
+                 background:var(--card);font-size:14px;color:var(--teal)}
+  .recbar button.live{background:var(--red);color:#fff;border-color:var(--red)}
+  .recbar button:disabled{opacity:.35}
   .err{background:#F6E4E2;border:1px solid var(--red);color:var(--red);
        padding:12px 14px;font-size:14px;margin:14px 0;border-radius:3px}
 
@@ -131,6 +136,7 @@
   <h1>OSCE 공부</h1>
   <p class="lede">한 케이스를 다섯 단계로 소화합니다. 하루 한 단계, 20분.</p>
   <div id="compat"></div>
+  <p class="note" id="diag" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px"></p>
 
   <label for="caseSel">케이스</label>
   <select id="caseSel"></select>
@@ -191,9 +197,9 @@ const STEPS = [
   { id:0, t:"듣기만 하기",      d:"대화를 끝까지 듣습니다. 따라 하지 말고 흐름만 익히세요.",
     how:"재생을 누르고 듣기만 하세요. 눈으로는 영어와 한국어를 같이 따라갑니다." },
   { id:1, t:"따라 읽기",        d:"Dentist 대사를 소리 내어 따라 읽습니다.",
-    how:"한 줄 듣고 똑같이 소리 내어 읽으세요. 다 읽으면 다음을 누릅니다." },
+    how:"한 줄 듣고 똑같이 소리 내어 읽으세요. 녹음해서 비교하면 더 좋습니다." },
   { id:2, t:"한국어 → 영어",    d:"한국어만 보고 영어로 말합니다.",
-    how:"한국어를 보고 영어로 말한 뒤, 확인을 눌러 비교하세요. 완벽할 필요 없습니다." },
+    how:"한국어를 보고 영어로 말하세요. 녹음해두면 정답과 나란히 들어볼 수 있습니다." },
   { id:3, t:"Cue 떠올리기",     d:"큐카드만 보고 물어야 할 8가지를 떠올립니다.",
     how:"카드를 읽고, 무엇을 물어야 할지 하나씩 말해보세요. 그다음 열어서 맞춰봅니다." },
   { id:4, t:"롤플레이",         d:"실전처럼 10분 스테이션을 돕니다.",
@@ -323,6 +329,53 @@ async function sayAnswer(text){
   speak(text);
 }
 
+/* ── 녹음 ── */
+const REC = { mr:null, chunks:[], url:null, on:false, stream:null };
+
+function recMime(){
+  const c = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", ""];
+  for(const t of c){
+    if(!t) return "";
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return "";
+}
+
+async function recStart(){
+  if(!navigator.mediaDevices || !window.MediaRecorder)
+    throw new Error("이 브라우저는 녹음을 지원하지 않습니다.");
+  REC.stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  const mt = recMime();
+  REC.mr = mt ? new MediaRecorder(REC.stream, { mimeType:mt })
+              : new MediaRecorder(REC.stream);
+  REC.chunks = [];
+  REC.mr.ondataavailable = e => { if(e.data && e.data.size) REC.chunks.push(e.data); };
+  REC.mr.start();
+  REC.on = true;
+}
+
+function recStop(){
+  return new Promise(res => {
+    if(!REC.mr || REC.mr.state === "inactive"){ REC.on = false; return res(null); }
+    REC.mr.onstop = () => {
+      REC.on = false;
+      if(REC.stream){ REC.stream.getTracks().forEach(t => t.stop()); REC.stream = null; }
+      if(REC.url) URL.revokeObjectURL(REC.url);
+      const blob = new Blob(REC.chunks, { type: REC.chunks[0] ? REC.chunks[0].type : "audio/mp4" });
+      REC.url = URL.createObjectURL(blob);
+      res(blob);
+    };
+    try{ REC.mr.stop(); }catch(e){ REC.on = false; res(null); }
+  });
+}
+
+function recPlay(){
+  if(!REC.url) return;
+  stopSpeak();
+  const a = new Audio(REC.url);
+  a.play().catch(() => {});
+}
+
 /* ── 홈 ── */
 function groupOptions(cases){
   const groups = [];
@@ -386,18 +439,43 @@ async function fetchVoices(key){
 function repairIndex(){
   const ids = store.idx();
   if(!ids.length) return 0;
-  const needs = ids.some(m => !m.moduleName || !m.code);
-  if(!needs) return 0;
   let fixed = 0;
   const rebuilt = ids.map(m => {
-    if(m.moduleName && m.code) return m;
     const full = store.load(m.id);
     if(!full) return m;
-    fixed++;
-    return store.meta(full);
+    const nm = store.meta(full);
+    if(nm.moduleName !== m.moduleName || nm.code !== m.code) fixed++;
+    return nm;
   });
   try{ localStorage.setItem(PFX+"index", JSON.stringify(rebuilt)); }catch(e){}
   return fixed;
+}
+
+function recBar(){
+  return '<div class="recbar">' +
+         '<button id="recBtn">● 내 목소리 녹음</button>' +
+         '<button id="recPlay" disabled>내 목소리 듣기</button></div>';
+}
+
+function wireRec(){
+  const b = $("recBtn"), pb = $("recPlay");
+  if(!b) return;
+  if(REC.url) pb.disabled = false;
+  b.onclick = async () => {
+    if(REC.on){
+      b.textContent = "저장 중…"; b.disabled = true;
+      await recStop();
+      b.classList.remove("live"); b.textContent = "● 내 목소리 녹음";
+      b.disabled = false; pb.disabled = false;
+      return;
+    }
+    try{
+      stopSpeak();
+      await recStart();
+      b.classList.add("live"); b.textContent = "■ 녹음 중 — 누르면 정지";
+    }catch(e){ alert(e.message || "녹음을 시작할 수 없습니다."); }
+  };
+  pb.onclick = recPlay;
 }
 
 function loadCases(){
@@ -458,6 +536,7 @@ function finishStep(){
 }
 function open_(step){
   S.step = step; S.i = 0; S.veil = true;
+  if(REC.url){ URL.revokeObjectURL(REC.url); REC.url = null; }
   const meta = STEPS[step];
   $("runTitle").textContent = (step+1)+". "+meta.t;
   $("runHow").textContent = meta.how;
@@ -522,7 +601,9 @@ function runShadow(){
     $("runBody").innerHTML = ts.map((t,i) =>
       '<div class="turn '+(t.who==="dr"?"dr":"pt")+(i===S.i?" now":" dim")+'" id="t'+i+'">' +
       '<div class="who">'+(t.who==="dr"?"Dentist":"Patient")+"</div>" +
-      '<div class="en">'+esc(t.en)+'</div><div class="ko">'+esc(t.ko)+"</div></div>").join("");
+      '<div class="en">'+esc(t.en)+'</div><div class="ko">'+esc(t.ko)+"</div></div>").join("")
+      + recBar();
+    wireRec();
     const e = $("t"+S.i); if(e) e.scrollIntoView({block:"center"});
     $("dockIn") && dock([
       {label:"◀",sec:true,off:S.i===0,go:()=>{ if(S.i>0){S.i--;draw();} }},
@@ -544,7 +625,8 @@ function runRecall(){
       '<div class="one"><div class="who">DENTIST — 이 뜻을 영어로 말해보세요</div>' +
       '<div class="ko">'+esc(t.ko)+"</div>" +
       '<div class="en'+(S.veil?" veil":"")+'">'+esc(t.en)+"</div></div>" +
-      '<p class="counter">'+(S.i+1)+" / "+ds.length+"</p>";
+      '<p class="counter">'+(S.i+1)+" / "+ds.length+"</p>" + recBar();
+    wireRec();
     dock(S.veil
       ? [{label:"처음으로",sec:true,go:home},{label:"확인",go:()=>{ S.veil=false; draw(); sayAnswer(t.en); }}]
       : [{label:"다시 듣기",sec:true,go:()=>sayAnswer(t.en)},
@@ -611,6 +693,12 @@ function runCues(){
   $("caseSel").onchange = pickCase;
   try{ migrateOldPacks(); }catch(e){}
   try{ repairIndex(); }catch(e){}
+  try{
+    const ids = store.idx();
+    const withMod = ids.filter(m => m.moduleName).length;
+    $("diag").textContent = "v6 · 저장된 케이스 " + ids.length +
+      "개 · 세트 붙은 것 " + withMod + "개";
+  }catch(e){ $("diag").textContent = "v6 · 목록 확인 실패"; }
   try{ loadCases(); pickCase(); }
   catch(e){ alert("케이스 목록을 읽지 못했습니다: " + e.message); }
 
