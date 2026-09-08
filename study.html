@@ -340,6 +340,24 @@ function groupOptions(cases){
     "</optgroup>").join("");
 }
 
+
+/* 예전 저장 형식(한 덩어리)이 남아 있으면 새 형식으로 옮긴다 */
+function migrateOldPacks(){
+  let old = null;
+  try{ old = localStorage.getItem(PFX+"packs"); }catch(e){ return 0; }
+  if(!old) return 0;
+  let list = [];
+  try{ list = JSON.parse(old) || []; }catch(e){ return 0; }
+  if(!Array.isArray(list) || !list.length){
+    try{ localStorage.removeItem(PFX+"packs"); }catch(e){}
+    return 0;
+  }
+  let n = 0;
+  try{ n = store.addPacks(list.filter(c => c && c.id)); }catch(e){ n = -1; }
+  if(n >= 0){ try{ localStorage.removeItem(PFX+"packs"); }catch(e){} }
+  return n;
+}
+
 function loadCases(){
   S.metas = BUILTIN.map(store.meta).concat(store.idx());
   $("caseSel").innerHTML = S.metas.length
@@ -539,6 +557,7 @@ function runCues(){
   voicesReady().then(vs => { voiceCache = pickVoice(vs); });
   $("rate").value = String(store.rate);
   $("rate").onchange = () => store.rate = parseFloat($("rate").value)||1.2;
+  migrateOldPacks();
   loadCases();
   $("caseSel").onchange = pickCase;
   pickCase();
