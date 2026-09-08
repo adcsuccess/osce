@@ -184,504 +184,7 @@
 
 <script>
 "use strict";
-const BUILTIN = [
-{
- "id": "amalgam_mercury_poisoning_concern",
- "title": "Amalgam 교체 상담 — Mercury poisoning 우려와 심미 개선 요구 (Mrs. Williamson)",
- "station": "OSCE Station 32 · 10 minutes",
- "readSeconds": 180,
- "stationSeconds": 600,
- "cueCard": {
-  "setting": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
-  "patient": "",
-  "tasks": [
-   "Address the mercury poisoning concern with evidence based reassurance.",
-   "Explain why amalgam is banned in some countries.",
-   "Explain the SMART protocol for safe amalgam removal.",
-   "Ask about pain, sensitivity, discomfort, grinding and staining habits.",
-   "Discuss all options including doing nothing, composite, inlay, onlay and crown with rough costs, using the OPG.",
-   "Try to convince her she does not have to replace healthy fillings just because someone made a comment.",
-   "If she still insists, agree to do it once she understands the pros and cons."
-  ]
- },
- "patient": {
-  "name": "Mrs. Chen",
-  "voiceHint": "en-AU",
-  "opening": "Yes doctor. I have had these silver fillings for a very long time. I am in a new relationship now. My partner said he can see this ugly colour when I smile. So I started looking online. I was shocked. These fillings have mercury in them. I may have been poisoning myself for years. My old dentist never told me this.",
-  "persona": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
-  "sampleLines": [
-   "Honestly, both. His comment started it. But now I keep looking in the mirror. I do not like the colour either.",
-   "I googled it. It was all there. Are you telling me the information is not true?",
-   "But I have so many fillings. And they have been in my mouth for many years. Surely that is a risk?",
-   "I read a World Health Organization article. That is a verified source, doctor.",
-   "Then why is it banned in some countries? That does not sound safe to me.",
-   "What kind of measures? Inside this clinic?",
-   "And if you take mine out? You said removal is one of the risky times.",
-   "Alright. That does make me feel a bit better.",
-   "No, nothing like that.",
-   "No. They have never given me trouble. It is only this new worry.",
-   "I am not really sure. Maybe?",
-   "Actually yes. And I have been told before that I grind at night.",
-   "My GP has put me on e-cigarettes.",
-   "I am a bit of a foodie. So all of that applies to me.",
-   "I have a rather large smile though. When I smile I can see almost all my lower teeth. So I think they all need changing.",
-   "Can I just have that first material on all the teeth? It sounds affordable.",
-   "And this very big one here? What about that tooth?"
-  ]
- },
- "study": {
-  "turns": [
-   {
-    "who": "dr",
-    "en": "Good morning, Mrs Williamson. I am glad to have you here today. I can see you are booked for your six monthly checkup and clean. We can certainly do that for you. I can also see you are worried about mercury. Can you please tell me more about it?",
-    "ko": "안녕하세요 Mrs Williamson. 오늘 오셔서 반갑습니다. 6개월 checkup과 clean 예약이시네요. 그건 당연히 해드릴 수 있습니다. 그리고 mercury에 대해 걱정하고 계신 것도 확인했습니다. 그 부분을 더 말씀해 주시겠어요?"
-   },
-   {
-    "who": "pt",
-    "en": "Yes doctor. I have had these silver fillings for a very long time. I am in a new relationship now. My partner said he can see this ugly colour when I smile. So I started looking online. I was shocked. These fillings have mercury in them. I may have been poisoning myself for years. My old dentist never told me this.",
-    "ko": "네 선생님. 이 silver filling들을 아주 오래 갖고 있었어요. 지금 새로운 관계를 시작했어요. 파트너가 제가 웃을 때 이 보기 싫은 색이 보인다고 했어요. 그래서 인터넷을 찾아봤어요. 충격받았어요. 이 filling에 mercury가 있대요. 몇 년 동안 저를 중독시켰을 수도 있어요. 전 치과의사는 이런 말을 안 했어요."
-   },
-   {
-    "who": "dr",
-    "en": "Thank you for sharing that with me. I am sorry your partner said that about your smile. That must have felt hurtful. Let me reassure you about one thing first. You have a beautiful smile. The colour of the fillings does not change that. Before we go further, may I ask you one question? Do you want them changed for yourself? Or is it mainly because of his comment?",
-    "ko": "말씀해 주셔서 감사합니다. 파트너가 미소에 대해 그렇게 말한 것은 유감입니다. 마음이 상하셨을 것 같습니다. 먼저 한 가지 안심시켜 드리겠습니다. 당신의 미소는 아름답습니다. filling 색이 그것을 바꾸지 않습니다. 더 진행하기 전에 하나만 물어봐도 될까요? 본인을 위해 바꾸고 싶으신가요? 아니면 주로 그분의 말 때문인가요? 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "Honestly, both. His comment started it. But now I keep looking in the mirror. I do not like the colour either.",
-    "ko": "솔직히 둘 다예요. 그 말이 시작이었어요. 그런데 지금은 계속 거울을 봐요. 저도 색이 싫어요."
-   },
-   {
-    "who": "dr",
-    "en": "That is fair. I will walk you through every option today. First let me deal with the mercury worry. Where did you read about it?",
-    "ko": "이해합니다. 오늘 모든 옵션을 안내해 드리겠습니다. 먼저 mercury 걱정을 다루겠습니다. 어디에서 읽으셨나요?"
-   },
-   {
-    "who": "pt",
-    "en": "I googled it. It was all there. Are you telling me the information is not true?",
-    "ko": "구글에서 검색했어요. 다 나와 있어요. 그 정보가 사실이 아니라고 말씀하시는 건가요?"
-   },
-   {
-    "who": "dr",
-    "en": "No, I am not saying that. Thanks to Doctor Google we have a lot of information. Some of it is good. Some of it is not verified. I will not deny one fact. There is some mercury in these fillings. That part is true. But the exposure happens at only two times. It happens when we mix and place the filling. It also happens when we remove the filling.",
-    "ko": "아니요, 그런 뜻이 아닙니다. Doctor Google 덕분에 정보가 많습니다. 일부는 좋습니다. 일부는 검증되지 않았습니다. 한 가지 사실은 부인하지 않겠습니다. 이 filling에는 mercury가 일부 있습니다. 그건 사실입니다. 하지만 노출은 두 시점에만 일어납니다. 섞어서 넣을 때 일어납니다. 그리고 제거할 때 일어납니다. 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "But I have so many fillings. And they have been in my mouth for many years. Surely that is a risk?",
-    "ko": "하지만 저는 filling이 아주 많아요. 그리고 몇 년이나 입 안에 있었어요. 그게 위험하지 않겠어요?"
-   },
-   {
-    "who": "dr",
-    "en": "That is a very good question. Once they are set in your mouth, they are in a bound state. In that state the exposure is almost negligible. This is true no matter how long they sit there. There is more mercury in the air around us every day. So please do not worry. You have not been poisoning yourself.",
-    "ko": "아주 좋은 질문입니다. 입 안에서 굳으면 결합된 상태가 됩니다. 그 상태에서 노출은 거의 무시할 수준입니다. 얼마나 오래 있었는지와 무관합니다. 우리 주변 공기에 매일 더 많은 mercury가 있습니다. 그러니 걱정하지 마세요. 스스로를 중독시킨 것이 아닙니다. 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "I read a World Health Organization article. That is a verified source, doctor.",
-    "ko": "저는 세계보건기구 자료를 읽었어요. 그건 검증된 출처예요, 선생님."
-   },
-   {
-    "who": "dr",
-    "en": "I understand. Not everything online is verified. But I will not deny the mercury content. I only want you to know the two moments of exposure. I can also print some brochures for you today. They come from the Australian Dental Association.",
-    "ko": "이해합니다. 인터넷의 모든 것이 검증된 것은 아닙니다. 하지만 mercury가 있다는 점은 부인하지 않습니다. 노출되는 두 시점만 알아주시면 됩니다. 오늘 브로슈어도 출력해 드릴 수 있습니다. Australian Dental Association 자료입니다."
-   },
-   {
-    "who": "pt",
-    "en": "Then why is it banned in some countries? That does not sound safe to me.",
-    "ko": "그럼 왜 어떤 나라에서는 금지됐나요? 안전하게 들리지 않아요."
-   },
-   {
-    "who": "dr",
-    "en": "You are right. It is banned in some countries. The reason is environmental, not personal health. Those countries did not have a proper disposal system. So the environment became polluted with amalgam waste. In Australia we have very strict disposal measures.",
-    "ko": "맞습니다. 일부 국가에서 금지되었습니다. 이유는 환경 문제이고 개인 건강 문제가 아닙니다. 그 나라들은 적절한 폐기 시스템이 없었습니다. 그래서 amalgam 폐기물로 환경이 오염되었습니다. 호주에서는 폐기 규정이 매우 엄격합니다. 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "What kind of measures? Inside this clinic?",
-    "ko": "어떤 조치요? 이 병원 안에서요?"
-   },
-   {
-    "who": "dr",
-    "en": "Yes, inside the clinic. We have traps in our suction system. A trap is like a small filter. If we remove amalgam that day, the pieces sit in the trap. We clean it at the end of the day. Those pieces go into a separate bin. That bin is collected separately by a special service. So the amalgam never goes into normal waste. We are also slowly using less amalgam over time.",
-    "ko": "네, 병원 안에서입니다. suction 시스템에 trap이 있습니다. trap은 작은 필터 같은 것입니다. 그날 amalgam을 제거하면 조각이 trap에 남습니다. 하루가 끝날 때 청소합니다. 그 조각들은 별도의 bin에 넣습니다. 그 bin은 전문 업체가 따로 수거합니다. 그래서 amalgam은 일반 폐기물로 가지 않습니다. 또한 시간이 지나면서 amalgam 사용을 줄여가고 있습니다."
-   },
-   {
-    "who": "pt",
-    "en": "And if you take mine out? You said removal is one of the risky times.",
-    "ko": "그럼 제 것을 제거할 때는요? 제거할 때가 위험한 시점 중 하나라고 하셨잖아요."
-   },
-   {
-    "who": "dr",
-    "en": "Yes, and I am glad you remembered. We follow a protocol for that. It is called the SMART protocol. SMART stands for Safe Mercury Amalgam Removal Technique. Let me explain what happens. Once you are seated, we give you a protective covering. You will wear protective eyewear. You will wear a nasal mask and breathe oxygen. We isolate the working area with a rubber sheet. That is a rubber dam. We remove the amalgam in chunks, not as dust. We use copious water and high volume suction. These steps keep your exposure to a minimum.",
-    "ko": "네, 기억해 주셔서 좋습니다. 그것을 위한 protocol이 있습니다. SMART protocol이라고 합니다. SMART는 Safe Mercury Amalgam Removal Technique의 약자입니다. 어떻게 진행되는지 설명드리겠습니다. 앉으시면 보호용 덮개를 드립니다. 보호 안경을 착용하십니다. 코 마스크를 쓰고 산소를 호흡하십니다. 작업 부위는 고무 시트로 격리합니다. rubber dam입니다. amalgam은 가루가 아니라 덩어리로 제거합니다. 물을 충분히 쓰고 강한 suction을 씁니다. 이 단계들이 노출을 최소로 유지합니다. 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "Alright. That does make me feel a bit better.",
-    "ko": "그렇군요. 조금 안심이 되네요."
-   },
-   {
-    "who": "dr",
-    "en": "Good. Now I need to ask a few questions. Do you have any pain in any of these teeth?",
-    "ko": "좋습니다. 이제 몇 가지 질문을 드리겠습니다. 이 치아들 중 어디든 통증이 있으신가요?"
-   },
-   {
-    "who": "pt",
-    "en": "No, nothing like that.",
-    "ko": "아니요, 그런 건 없어요."
-   },
-   {
-    "who": "dr",
-    "en": "Any sensitivity or discomfort? Any food getting stuck at the back?",
-    "ko": "시린 느낌이나 불편감은 있으신가요? 뒤쪽에 음식이 끼는 건 있으신가요?"
-   },
-   {
-    "who": "pt",
-    "en": "No. They have never given me trouble. It is only this new worry.",
-    "ko": "아니요. 문제를 일으킨 적이 없어요. 이 새로운 걱정뿐이에요."
-   },
-   {
-    "who": "dr",
-    "en": "Thank you. Next question. Do you think you grind or clench your teeth?",
-    "ko": "감사합니다. 다음 질문입니다. 이를 갈거나 꽉 무는 습관이 있다고 생각하시나요?"
-   },
-   {
-    "who": "pt",
-    "en": "I am not really sure. Maybe?",
-    "ko": "확실히는 모르겠어요. 아마도요?"
-   },
-   {
-    "who": "dr",
-    "en": "Let me ask it differently. Do you wake up with tightness in your cheek muscles? Or soreness around your head in the morning?",
-    "ko": "다르게 물어보겠습니다. 아침에 볼 근육이 뻣뻣한 느낌으로 깨시나요? 아니면 아침에 머리 주변이 아프신가요?"
-   },
-   {
-    "who": "pt",
-    "en": "Actually yes. And I have been told before that I grind at night.",
-    "ko": "사실 그래요. 그리고 밤에 이를 간다는 말을 들은 적이 있어요."
-   },
-   {
-    "who": "dr",
-    "en": "Thank you. That is important for our plan. One more thing. Do you smoke or vape at all?",
-    "ko": "감사합니다. 그것은 계획에 중요합니다. 하나 더 있습니다. 혹시 담배나 vape을 하시나요?"
-   },
-   {
-    "who": "pt",
-    "en": "My GP has put me on e-cigarettes.",
-    "ko": "저희 GP가 전자담배로 바꾸게 했어요."
-   },
-   {
-    "who": "dr",
-    "en": "Alright, that is good. Just one word of caution about the new fillings. Vaping can stain white filling material. Tea, coffee and red wine can also stain it. So you may need polishing regularly. Six monthly is usually fine.",
-    "ko": "네, 좋습니다. 새 filling에 대해 한 가지만 주의드리겠습니다. vaping은 흰 filling 재료를 착색시킬 수 있습니다. 차, 커피, 레드와인도 착색시킬 수 있습니다. 그래서 정기적인 polishing이 필요할 수 있습니다. 보통 6개월마다면 충분합니다."
-   },
-   {
-    "who": "pt",
-    "en": "I am a bit of a foodie. So all of that applies to me.",
-    "ko": "저는 음식을 좋아하는 편이에요. 그러니 다 해당되네요."
-   },
-   {
-    "who": "dr",
-    "en": "Understood. Now I would like to show you your x-ray. Please look here with me. This is your full mouth x-ray. I will point to the fillings as I talk. Let me start with the first option. The first option is to leave them as they are. You have no pain and no discomfort. These fillings have served you well for years. It is cost effective and time effective. We do not need to drill into healthy fillings.",
-    "ko": "알겠습니다. 이제 x-ray를 보여드리고 싶습니다. 저와 함께 여기를 봐 주세요. 전악 x-ray입니다. 설명하면서 filling들을 짚어 드리겠습니다. 첫 번째 옵션부터 시작하겠습니다. 첫 번째 옵션은 그대로 두는 것입니다. 통증도 불편감도 없으십니다. 이 filling들은 수년간 잘 기능했습니다. 비용과 시간 면에서 효율적입니다. 건강한 filling을 갈아낼 필요가 없습니다. 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "I have a rather large smile though. When I smile I can see almost all my lower teeth. So I think they all need changing.",
-    "ko": "그런데 제 미소가 꽤 큰 편이에요. 웃으면 아래 치아가 거의 다 보여요. 그러니 다 바꿔야 할 것 같아요."
-   },
-   {
-    "who": "dr",
-    "en": "Alright, I hear you. Let me give you every option then. Look at these front teeth on the x-ray. These fillings are small. For small fillings we use composite. Composite is a white resin material. The advantage is the colour. It can match your tooth well. The disadvantage is strength. It is not as strong as your silver filling. The cost is about 250 to 400 dollars. It depends on how many surfaces we fill.",
-    "ko": "네, 알겠습니다. 그러면 모든 옵션을 드리겠습니다. x-ray에서 이 앞쪽 치아들을 보세요. 이 filling들은 작습니다. 작은 filling에는 composite을 씁니다. composite은 흰색 레진 재료입니다. 장점은 색입니다. 치아 색과 잘 맞습니다. 단점은 강도입니다. silver filling만큼 강하지 않습니다. 비용은 약 250에서 400달러입니다. 몇 면을 채우는지에 따라 다릅니다."
-   },
-   {
-    "who": "pt",
-    "en": "Can I just have that first material on all the teeth? It sounds affordable.",
-    "ko": "그 첫 번째 재료를 모든 치아에 할 수 있나요? 비용이 감당될 것 같아요."
-   },
-   {
-    "who": "dr",
-    "en": "We can discuss that. But please look at these back teeth. These fillings are much bigger. For moderate sized ones we can use an inlay or an onlay. They are made outside the mouth and then fitted in. An inlay sits between the bumps of the tooth. An onlay also covers the bumps. So an onlay is bigger. They are stronger than composite. But they cost more. I am looking at about 700 dollars and up.",
-    "ko": "그건 논의할 수 있습니다. 하지만 이 뒤쪽 치아들을 봐 주세요. 이 filling들은 훨씬 큽니다. 중간 크기에는 inlay나 onlay를 쓸 수 있습니다. 구강 외부에서 만들어 넣습니다. inlay는 치아 돌기 사이에 놓입니다. onlay는 돌기까지 덮습니다. 그래서 onlay가 더 큽니다. composite보다 강합니다. 하지만 비용이 더 듭니다. 약 700달러 이상으로 봅니다."
-   },
-   {
-    "who": "pt",
-    "en": "And this very big one here? What about that tooth?",
-    "ko": "그리고 여기 아주 큰 이건요? 그 치아는 어떻게 하나요?"
-   },
-   {
-    "who": "dr",
-    "en": "Good eye. That one is too big for a filling. For that we consider a crown. A crown is like a cap or a helmet for the tooth. It sits all around the tooth. The advantage is protection and strength. The downside is we must trim healthy tooth first. It is also the most expensive option. It starts at about 1800 dollars. Since you grind, we may need stronger zirconia. That adds another 300 to 400 dollars.",
-    "ko": "잘 보셨습니다. 그것은 filling으로는 너무 큽니다. 그 경우 crown을 고려합니다. crown은 치아를 위한 모자나 헬멧 같습니다. 치아 전체를 둘러쌉니다. 장점은 보호와 강도입니다. 단점은 건강한 치아를 먼저 삭제해야 합니다. 가장 비싼 옵션이기도 합니다. 약 1800달러부터 시작합니다. 이를 가시니 더 강한 zirconia가 필요할 수 있습니다. 그러면 300에서 400달러가 더 듭니다."
-   },
-   {
-    "who": "dr",
-    "en": "I know that was a lot of information. May I give you my honest recommendation? If the fillings are not causing problems, I would leave them. There are two reasons. First, these back ones are very large. While removing them I may get very close to the nerve. I may even injure the tooth. Then you could need nerve treatment. That is more extensive and more costly. Second, you told me you grind. White fillings chip and break more often with grinding.",
-    "ko": "정보가 많았다는 것을 압니다. 솔직한 권고를 드려도 될까요? filling이 문제를 일으키지 않는다면 저는 그대로 두겠습니다. 이유는 두 가지입니다. 첫째, 뒤쪽 이것들이 매우 큽니다. 제거하는 동안 신경에 아주 가까워질 수 있습니다. 치아를 손상시킬 수도 있습니다. 그러면 신경치료가 필요할 수 있습니다. 더 광범위하고 비용도 더 듭니다. 둘째, 이를 간다고 말씀하셨습니다. grinding이 있으면 흰 filling이 더 자주 깨집니다. 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "So you are saying no. You will not do it.",
-    "ko": "그러니까 안 된다는 말씀이시네요. 안 해주시겠다는 거죠."
-   },
-   {
-    "who": "dr",
-    "en": "I did not say no. I am giving you my professional advice. The decision is yours. If we do change them, I can also make you a night guard. You would wear it at night. It protects the new fillings from grinding. But please still know they are more prone to chips and wear.",
-    "ko": "안 된다고 말하지 않았습니다. 제 전문가적 조언을 드리는 것입니다. 결정은 당신의 것입니다. 만약 바꾸게 되면 night guard도 만들어 드릴 수 있습니다. 밤에 착용하시게 됩니다. grinding으로부터 새 filling을 보호합니다. 하지만 깨지고 닳기 쉬운 점은 알아주세요."
-   },
-   {
-    "who": "pt",
-    "en": "No doctor. I have made up my mind. Not just the visible ones. I want them all changed. Will you do it or not?",
-    "ko": "아니요 선생님. 저는 마음을 정했어요. 보이는 것만이 아니에요. 전부 바꾸고 싶어요. 해주실 건가요, 안 해주실 건가요?"
-   },
-   {
-    "who": "dr",
-    "en": "No problem, Mrs Williamson. If you still want to go ahead, I will do them for you. I only ask one thing. Please understand the pros and cons we discussed today. You have every right to decide about your own smile. I would just ask you not to start today. This decision came after a comment. Please go home and have a think first. If you feel the same next visit, we will begin. We can start with the visible ones when you smile. Or we can start with any margins I find chipped or worn.",
-    "ko": "괜찮습니다 Mrs Williamson. 그래도 진행하고 싶으시면 제가 해드리겠습니다. 한 가지만 부탁드립니다. 오늘 논의한 장단점을 이해해 주세요. 본인의 미소에 대해 결정할 권리가 있습니다. 다만 오늘 시작하지는 마시길 권합니다. 이 결정은 어떤 말 뒤에 나왔습니다. 먼저 집에 가서 생각해 보세요. 다음 방문에도 같은 마음이면 시작하겠습니다. 웃을 때 보이는 것부터 시작할 수 있습니다. 아니면 제가 이가 빠지거나 닳은 부위를 찾아 그곳부터 할 수 있습니다. 필수 문장"
-   },
-   {
-    "who": "pt",
-    "en": "Alright. That sounds fair. I will think about it.",
-    "ko": "좋아요. 합리적으로 들려요. 생각해 볼게요."
-   },
-   {
-    "who": "dr",
-    "en": "Thank you. I will print all of this out for you. That includes the costs and the brochures. Today we can do your checkup and clean as planned. I can also polish any stains for you. Please call me if any question comes up at home. And please remember what I said at the start. You have a beautiful smile already.",
-    "ko": "감사합니다. 오늘 내용은 모두 출력해 드리겠습니다. 비용과 브로슈어도 포함됩니다. 오늘은 예정대로 checkup과 clean을 해드릴 수 있습니다. 착색도 polishing 해드릴 수 있습니다. 집에서 궁금한 점이 생기면 전화 주세요. 그리고 처음에 말씀드린 것을 기억해 주세요. 당신은 이미 아름다운 미소를 갖고 있습니다."
-   }
-  ]
- },
- "cues": [
-  {
-   "id": "C1",
-   "hidden": "교체를 원하는 진짜 이유는 새 파트너가 미소에서 보이는 색이 보기 흉하다고 말한 것",
-   "when": "오프닝 우려 청취 구간",
-   "probe": "Can you tell me more about your concern?"
-  },
-  {
-   "id": "C2",
-   "hidden": "수은 정보는 온라인 검색(Google)에서 얻었고, 이전 치과의사는 한 번도 말해주지 않았다",
-   "when": "오프닝 우려 청취 구간",
-   "probe": "Where did you hear about the mercury?"
-  },
-  {
-   "id": "C3",
-   "hidden": "현재 통증, 시림, 불편감, 음식 끼임은 전혀 없다",
-   "when": "증상 확인 구간",
-   "probe": "Do you have any pain from these fillings?"
-  },
-  {
-   "id": "C4",
-   "hidden": "미소가 커서 아래 치아까지 다 보이므로 전부 교체하고 싶어한다",
-   "when": "옵션 논의 구간",
-   "probe": "Which teeth show when you smile?"
-  },
-  {
-   "id": "C5",
-   "hidden": "GP가 처방해서 현재 e-cigarette을 사용 중이다",
-   "when": "습관 확인 구간",
-   "probe": "Do you smoke or vape at all?"
-  },
-  {
-   "id": "C6",
-   "hidden": "과거에 이갈이가 있다는 말을 들은 적이 있다",
-   "when": "습관 확인 구간",
-   "probe": "Do you think you grind your teeth?"
-  },
-  {
-   "id": "C7",
-   "hidden": "먹는 것을 즐기는 foodie로 tea, coffee, red wine 등 다양하게 섭취한다",
-   "when": "습관 확인 구간",
-   "probe": "Do you drink tea or coffee often?"
-  },
-  {
-   "id": "C8",
-   "hidden": "모든 설명을 들은 뒤에도 마음을 정했고 전부 교체하기를 원한다",
-   "when": "마무리 결정 구간",
-   "probe": "Have you had a think about the options?"
-  }
- ],
- "rubric": {
-  "domains": [
-   {
-    "id": "A",
-    "name": "Communication",
-    "max": 8,
-    "items": [
-     {
-      "no": "A1",
-      "criterion": "파트너의 코멘트로 상처받은 감정을 먼저 인정하고, filling 색과 무관하게 미소가 아름답다고 안심시켰는가 (예: I am sorry your partner said that. Your smile is still beautiful.)"
-     },
-     {
-      "no": "A2",
-      "criterion": "환자가 온라인에서 읽은 내용을 부정하거나 반박하지 않고, 수은이 있다는 사실 자체는 인정하며 접근했는가 (I will not deny there is mercury in the fillings)"
-     },
-     {
-      "no": "A3",
-      "criterion": "흡연/vaping, grinding 등 습관을 물을 때 심문하거나 판단하는 어조를 쓰지 않았는가 (중립적 톤, 20년 흡연에도 '오케이' 하고 넘어감)"
-     },
-     {
-      "no": "A4",
-      "criterion": "최종적으로 환자가 마음을 정했을 때 존중하고, 결정을 틀렸다고 느끼게 하지 않았는가"
-     }
-    ]
-   },
-   {
-    "id": "B",
-    "name": "Information Gathering",
-    "max": 10,
-    "items": [
-     {
-      "no": "B1",
-      "criterion": "교체를 원하는 동기가 본인의 뜻인지 파트너의 코멘트 때문인지 먼저 확인했는가 (Do you want them changed, or is it because of your partner?)"
-     },
-     {
-      "no": "B2",
-      "criterion": "수은 정보를 어디서 들었는지 출처를 물었는가 (Where did you hear that from?)"
-     },
-     {
-      "no": "B3",
-      "criterion": "PST - pain, sensitivity, discomfort 를 각 filling에 대해 확인했는가"
-     },
-     {
-      "no": "B4",
-      "criterion": "grinding 또는 clenching 습관을 물었고, 모른다고 할 때 아침 근육 뻐근함/동거인이 소리를 듣는지 등 후속 질문을 했는가"
-     },
-     {
-      "no": "B5",
-      "criterion": "staining 관련 요인(흡연/vaping, tea, coffee, 착색 음식)을 시간 낭비 없이 확인했는가"
-     }
-    ]
-   },
-   {
-    "id": "C",
-    "name": "Diagnosis",
-    "max": 8,
-    "items": [
-     {
-      "no": "C1",
-      "criterion": "현재 amalgam fillings에 임상적 문제가 없고 요구는 순수하게 심미적임을 명확히 정리했는가"
-     },
-     {
-      "no": "C2",
-      "criterion": "OPG(전악 방사선사진) 옆에 서서 치아를 직접 가리키며 filling 크기를 평가했는가 (examiner가 먼저 묻게 만들지 않았는가)"
-     },
-     {
-      "no": "C3",
-      "criterion": "작은 filling은 composite, marginal ridge/cusp가 관여된 중등도는 inlay/onlay, 매우 큰 것은 crown으로 치아별 판단을 제시했는가"
-     },
-     {
-      "no": "C4",
-      "criterion": "grinding 병력을 심미 수복물의 강도 문제와 연결지어 진단적으로 해석했는가"
-     }
-    ]
-   },
-   {
-    "id": "D",
-    "name": "Management",
-    "max": 10,
-    "items": [
-     {
-      "no": "D1",
-      "criterion": "수은 노출은 filling을 mixing/placing 할 때와 제거할 때만 발생하고, 구강 내 결합 상태에서는 노출이 거의 없다고 설명했는가 (환경 수은 노출과 비교 포함)"
-     },
-     {
-      "no": "D2",
-      "criterion": "일부 국가의 금지 이유가 폐기물 처리 시스템 부재에 따른 환경 문제이며, 호주는 엄격한 disposal 규정(suction trap, 별도 수거통)을 갖췄다고 설명했는가"
-     },
-     {
-      "no": "D3",
-      "criterion": "SMART protocol(Safe Mercury Amalgam Removal Technique)을 이름 뜻까지 포함해 설명하고, 보호 bib, 보호 안경, nasal oxygen mask, rubber dam 격리, chunk 제거, 충분한 물과 high volume suction을 언급했는가"
-     },
-     {
-      "no": "D4",
-      "criterion": "do nothing 포함 모든 옵션(composite, inlay/onlay, crown)을 제시하고 각각 대략적 비용을 dollars로 말했는가 (composite 250+, inlay/onlay 700+, crown 1800+, grinder면 zirconia 300-400 추가)"
-     },
-     {
-      "no": "D5",
-      "criterion": "교체하지 않도록 설득을 시도했는가 - 큰 후방 filling 제거 시 신경에 가까워져 root canal 등 더 큰 치료로 갈 위험, 그리고 grinder라서 white filling이 자주 깨진다는 두 가지 근거 제시"
-     },
-     {
-      "no": "D6",
-      "criterion": "당일에는 clean만 하고, 정보를 인쇄해 주며 다음 방문에 결정하도록 연기했는가 (충동적 결정 방지)"
-     }
-    ]
-   },
-   {
-    "id": "E",
-    "name": "Health Promotion & Professionalism",
-    "max": 4,
-    "items": [
-     {
-      "no": "E1",
-      "criterion": "WHO 또는 Australian Dental Association 자료/브로슈어 등 근거 기반 자료를 제공하겠다고 했는가"
-     },
-     {
-      "no": "E2",
-      "criterion": "composite 착색 관리를 위해 6개월마다 polishing이 필요하다고 안내했는가, 그리고 grinder에게 night guard(splint)를 제안했는가"
-     }
-    ]
-   }
-  ],
-  "criticalFails": [
-   "환자가 문제가 없고 순수 심미 목적일 때 교체하지 않아도 된다고 설득하는 대화를 아예 시도하지 않은 경우 - 이 유형 케이스의 1순위 탈락 사유",
-   "모든 옵션과 장단점을 설명한 뒤에도 환자가 원할 때 윤리적이지 않다며 거부하거나 second opinion으로 넘기는 경우",
-   "흡연/음주/습관을 물을 때 판단하는 어조로 환자가 자신의 습관에 대해 기분 나쁘게 느끼도록 만든 경우",
-   "staining 예시를 들 때 curry를 언급하는 것 - 인종차별로 간주됨"
-  ]
- },
- "stationNo": 32,
- "card": {
-  "station": 32,
-  "patient": "Mrs. Chen — adult female",
-  "complaint": "I want these silver fillings out — I've read the mercury is dangerous.",
-  "sections": [
-   {
-    "heading": "History",
-    "items": [
-     "Attended for a check-up and clean.",
-     "Wants amalgams replaced with tooth-coloured fillings (partner read they are harmful); dislikes the colour.",
-     "Reports some hair loss and worsening eyesight."
-    ]
-   },
-   {
-    "heading": "Social history",
-    "items": [
-     "Smoker (or vaper)."
-    ]
-   },
-   {
-    "heading": "Medical history",
-    "items": [
-     "Nil relevant."
-    ]
-   },
-   {
-    "heading": "Clinical findings on examination",
-    "items": [
-     "Multiple amalgam restorations, largely intact margins",
-     "No secondary caries on the fillings in question",
-     "Possible occlusal wear / signs of grinding"
-    ]
-   },
-   {
-    "heading": "Provided to you",
-    "items": [
-     "Intraoral photographs",
-     "Radiographs (bitewings)"
-    ]
-   }
-  ],
-  "tasks": [
-   "Take a relevant history",
-   "Explain your findings to the patient",
-   "Discuss management options"
-  ]
- }
-}
-];
+const BUILTIN = [];   // 케이스는 코드에 넣지 않는다. 각자 "케이스 불러오기"로 자기 폰에만 저장한다.
 
 
 const STEPS = [
@@ -700,11 +203,44 @@ const STEPS = [
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-const S = { cases:[], kase:null, step:0, i:0, playing:false, veil:true };
+const S = { metas:[], kase:null, step:0, i:0, playing:false, veil:true };
 
+const PFX = "study.";
 const store = {
-  get packs(){ try{ return JSON.parse(localStorage.getItem("study.packs")||"[]"); }catch(e){ return []; } },
-  set packs(v){ try{ localStorage.setItem("study.packs", JSON.stringify(v)); }catch(e){} },
+  idx(){
+    try{
+      const v = JSON.parse(localStorage.getItem(PFX+"index")||"[]");
+      return v.map(x => typeof x === "string" ? { id:x, title:x } : x);   // 예전 형식도 읽는다
+    }catch(e){ return []; }
+  },
+  meta(c){
+    return { id:c.id, title:c.title||c.id, code:c.code||"",
+             module:c.module||99, moduleName:c.moduleName||"", moduleColor:c.moduleColor||"" };
+  },
+  load(id){                            // 고른 케이스 하나만 펼친다
+    try{ const raw = localStorage.getItem(PFX+"c."+id); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return null; }
+  },
+  addPacks(list){
+    const ids = store.idx();
+    let n = 0;
+    for(const c of list){
+      try{ localStorage.setItem(PFX+"c."+c.id, JSON.stringify(c)); }
+      catch(e){
+        try{ localStorage.setItem(PFX+"index", JSON.stringify(ids)); }catch(e2){}
+        throw new Error("저장 공간이 찼습니다. "+n+"개까지 들어갔습니다. 나머지는 나눠서 넣으세요.");
+      }
+      const at = ids.findIndex(x => x.id === c.id);
+      if(at < 0) ids.push(store.meta(c)); else ids[at] = store.meta(c);
+      n++;
+    }
+    localStorage.setItem(PFX+"index", JSON.stringify(ids));
+    return n;
+  },
+  clearPacks(){
+    for(const m of store.idx()){ try{ localStorage.removeItem(PFX+"c."+m.id); }catch(e){} }
+    try{ localStorage.removeItem(PFX+"index"); }catch(e){}
+  },
   get rate(){ try{ return parseFloat(localStorage.getItem("study.rate"))||1.2; }catch(e){ return 1.2; } },
   set rate(v){ try{ localStorage.setItem("study.rate", v); }catch(e){} },
   get eng(){ try{ return localStorage.getItem("study.engine")||"tts"; }catch(e){ return "tts"; } },
@@ -788,10 +324,34 @@ async function sayAnswer(text){
 }
 
 /* ── 홈 ── */
+function groupOptions(cases){
+  const groups = [];
+  cases.forEach((c,i) => {
+    const key = c.moduleName || "분류 없음";
+    let g = groups.find(x => x.key === key);
+    if(!g){ g = { key:key, no:(c.module||99), color:c.moduleColor||"#8A8F98", items:[] };
+            groups.push(g); }
+    g.items.push({ i:i, label:(c.code ? c.code+"  " : "") + (c.title||c.id) });
+  });
+  groups.sort((a,b) => a.no - b.no);
+  return groups.map(g =>
+    '<optgroup label="'+esc((g.no<90 ? "Module "+g.no+" — " : "")+g.key)+'">' +
+    g.items.map(o => '<option value="'+o.i+'">'+esc(o.label)+"</option>").join("") +
+    "</optgroup>").join("");
+}
+
 function loadCases(){
-  S.cases = BUILTIN.concat(store.packs);
-  $("caseSel").innerHTML = S.cases.map((c,i)=>
-    '<option value="'+i+'">'+esc(c.title||c.id)+"</option>").join("");
+  S.metas = BUILTIN.map(store.meta).concat(store.idx());
+  $("caseSel").innerHTML = S.metas.length
+    ? groupOptions(S.metas)
+    : '<option value="">— 아래에서 케이스를 먼저 넣으세요 —</option>';
+}
+
+function takeCase(i){
+  const m = S.metas[i];
+  if(!m) return null;
+  const built = BUILTIN.find(c => c.id === m.id);
+  return built || store.load(m.id);
 }
 function drawSteps(){
   const done = store.prog(S.kase.id);
@@ -806,7 +366,7 @@ function drawSteps(){
   $("barFill").style.width = (done/STEPS.length*100)+"%";
 }
 function pickCase(){
-  S.kase = S.cases[+$("caseSel").value];
+  S.kase = takeCase(+$("caseSel").value);
   drawSteps();
 }
 
@@ -1031,14 +591,18 @@ function runCues(){
   $("reset").onclick = () => { store.setProg(S.kase.id, 0); drawSteps(); };
   $("openImport").onclick = () => $("importBox").classList.toggle("hide");
   $("doImport").onclick = () => {
+    let add;
     try{
       const v = JSON.parse($("importJson").value);
-      const add = Array.isArray(v) ? v : [v];
-      add.forEach(c => { if(!c.id) throw new Error("id 가 없습니다."); });
-      store.packs = store.packs.filter(p => !add.some(a => a.id === p.id)).concat(add);
-      loadCases(); pickCase();
-      $("importJson").value = ""; $("importBox").classList.add("hide");
-    }catch(e){ alert("JSON을 읽지 못했습니다: " + e.message); }
+      add = Array.isArray(v) ? v : [v];
+      add.forEach(c => { if(!c.id) throw new Error("id 가 없는 항목이 있습니다."); });
+    }catch(e){ alert("JSON을 읽지 못했습니다: " + e.message); return; }
+    let n = 0;
+    try{ n = store.addPacks(add); }
+    catch(e){ loadCases(); pickCase(); alert(e.message); return; }
+    loadCases(); pickCase();
+    $("importJson").value = ""; $("importBox").classList.add("hide");
+    alert(n + "개 케이스를 넣었습니다.");
   };
 })();
 </script>

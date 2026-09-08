@@ -188,6 +188,12 @@
   <label for="caseSel">케이스</label>
   <select id="caseSel"></select>
 
+  <label for="endmode">내 말 끝내기</label>
+  <select id="endmode">
+    <option value="tap" selected>탭해서 끝내기</option>
+    <option value="auto">멈추면 자동 (1.6초)</option>
+  </select>
+
   <label for="engine">환자 목소리</label>
   <select id="engine">
     <option value="tts">브라우저 기본 — 무료</option>
@@ -269,6 +275,7 @@
 <section id="s-report" class="stage">
   <h1>채점 결과</h1>
   <div id="report"></div>
+  <button class="btn" id="saveReport">결과 저장 · 공유</button>
   <button class="btn ghost" id="again">처음으로</button>
 </section>
 
@@ -280,284 +287,11 @@
 /* ══════════ 케이스 팩 ══════════
    아래는 형식을 보여주기 위한 임시 케이스입니다.
    실제 Divya / Warriors 케이스로 교체해서 쓰세요. */
-const BUILTIN = [
-{
- "id": "amalgam_mercury_poisoning_concern",
- "title": "Amalgam 교체 상담 — Mercury poisoning 우려와 심미 개선 요구 (Mrs. Williamson)",
- "station": "OSCE Station 32 · 10 minutes",
- "readSeconds": 180,
- "stationSeconds": 600,
- "cueCard": {
-  "setting": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
-  "patient": "",
-  "tasks": [
-   "Address the mercury poisoning concern with evidence based reassurance.",
-   "Explain why amalgam is banned in some countries.",
-   "Explain the SMART protocol for safe amalgam removal.",
-   "Ask about pain, sensitivity, discomfort, grinding and staining habits.",
-   "Discuss all options including doing nothing, composite, inlay, onlay and crown with rough costs, using the OPG.",
-   "Try to convince her she does not have to replace healthy fillings just because someone made a comment.",
-   "If she still insists, agree to do it once she understands the pros and cons."
-  ]
- },
- "patient": {
-  "name": "Mrs. Chen",
-  "voiceHint": "en-AU",
-  "opening": "Yes doctor. I have had these silver fillings for a very long time. I am in a new relationship now. My partner said he can see this ugly colour when I smile. So I started looking online. I was shocked. These fillings have mercury in them. I may have been poisoning myself for years. My old dentist never told me this.",
-  "persona": "Mrs Williamson attends for a six monthly checkup and clean. She has many old amalgam (silver) fillings. She has a new partner. He commented that her fillings look ugly when she smiles. She searched online and read that amalgam contains mercury. She is worried she has been poisoning herself for years. She has no pain, no sensitivity, no discomfort and no food packing. She has a positive history of grinding. Her GP has put her on e-cigarettes. She enjoys tea, coffee and wine. A full mouth x-ray (OPG) is available.",
-  "sampleLines": [
-   "Honestly, both. His comment started it. But now I keep looking in the mirror. I do not like the colour either.",
-   "I googled it. It was all there. Are you telling me the information is not true?",
-   "But I have so many fillings. And they have been in my mouth for many years. Surely that is a risk?",
-   "I read a World Health Organization article. That is a verified source, doctor.",
-   "Then why is it banned in some countries? That does not sound safe to me.",
-   "What kind of measures? Inside this clinic?",
-   "And if you take mine out? You said removal is one of the risky times.",
-   "Alright. That does make me feel a bit better.",
-   "No, nothing like that.",
-   "No. They have never given me trouble. It is only this new worry.",
-   "I am not really sure. Maybe?",
-   "Actually yes. And I have been told before that I grind at night.",
-   "My GP has put me on e-cigarettes.",
-   "I am a bit of a foodie. So all of that applies to me.",
-   "I have a rather large smile though. When I smile I can see almost all my lower teeth. So I think they all need changing.",
-   "Can I just have that first material on all the teeth? It sounds affordable.",
-   "And this very big one here? What about that tooth?"
-  ]
- },
- "cues": [
-  {
-   "id": "C1",
-   "hidden": "교체를 원하는 진짜 이유는 새 파트너가 미소에서 보이는 색이 보기 흉하다고 말한 것",
-   "when": "오프닝 우려 청취 구간",
-   "probe": "Can you tell me more about your concern?"
-  },
-  {
-   "id": "C2",
-   "hidden": "수은 정보는 온라인 검색(Google)에서 얻었고, 이전 치과의사는 한 번도 말해주지 않았다",
-   "when": "오프닝 우려 청취 구간",
-   "probe": "Where did you hear about the mercury?"
-  },
-  {
-   "id": "C3",
-   "hidden": "현재 통증, 시림, 불편감, 음식 끼임은 전혀 없다",
-   "when": "증상 확인 구간",
-   "probe": "Do you have any pain from these fillings?"
-  },
-  {
-   "id": "C4",
-   "hidden": "미소가 커서 아래 치아까지 다 보이므로 전부 교체하고 싶어한다",
-   "when": "옵션 논의 구간",
-   "probe": "Which teeth show when you smile?"
-  },
-  {
-   "id": "C5",
-   "hidden": "GP가 처방해서 현재 e-cigarette을 사용 중이다",
-   "when": "습관 확인 구간",
-   "probe": "Do you smoke or vape at all?"
-  },
-  {
-   "id": "C6",
-   "hidden": "과거에 이갈이가 있다는 말을 들은 적이 있다",
-   "when": "습관 확인 구간",
-   "probe": "Do you think you grind your teeth?"
-  },
-  {
-   "id": "C7",
-   "hidden": "먹는 것을 즐기는 foodie로 tea, coffee, red wine 등 다양하게 섭취한다",
-   "when": "습관 확인 구간",
-   "probe": "Do you drink tea or coffee often?"
-  },
-  {
-   "id": "C8",
-   "hidden": "모든 설명을 들은 뒤에도 마음을 정했고 전부 교체하기를 원한다",
-   "when": "마무리 결정 구간",
-   "probe": "Have you had a think about the options?"
-  }
- ],
- "rubric": {
-  "domains": [
-   {
-    "id": "A",
-    "name": "Communication",
-    "max": 8,
-    "items": [
-     {
-      "no": "A1",
-      "criterion": "파트너의 코멘트로 상처받은 감정을 먼저 인정하고, filling 색과 무관하게 미소가 아름답다고 안심시켰는가 (예: I am sorry your partner said that. Your smile is still beautiful.)"
-     },
-     {
-      "no": "A2",
-      "criterion": "환자가 온라인에서 읽은 내용을 부정하거나 반박하지 않고, 수은이 있다는 사실 자체는 인정하며 접근했는가 (I will not deny there is mercury in the fillings)"
-     },
-     {
-      "no": "A3",
-      "criterion": "흡연/vaping, grinding 등 습관을 물을 때 심문하거나 판단하는 어조를 쓰지 않았는가 (중립적 톤, 20년 흡연에도 '오케이' 하고 넘어감)"
-     },
-     {
-      "no": "A4",
-      "criterion": "최종적으로 환자가 마음을 정했을 때 존중하고, 결정을 틀렸다고 느끼게 하지 않았는가"
-     }
-    ]
-   },
-   {
-    "id": "B",
-    "name": "Information Gathering",
-    "max": 10,
-    "items": [
-     {
-      "no": "B1",
-      "criterion": "교체를 원하는 동기가 본인의 뜻인지 파트너의 코멘트 때문인지 먼저 확인했는가 (Do you want them changed, or is it because of your partner?)"
-     },
-     {
-      "no": "B2",
-      "criterion": "수은 정보를 어디서 들었는지 출처를 물었는가 (Where did you hear that from?)"
-     },
-     {
-      "no": "B3",
-      "criterion": "PST - pain, sensitivity, discomfort 를 각 filling에 대해 확인했는가"
-     },
-     {
-      "no": "B4",
-      "criterion": "grinding 또는 clenching 습관을 물었고, 모른다고 할 때 아침 근육 뻐근함/동거인이 소리를 듣는지 등 후속 질문을 했는가"
-     },
-     {
-      "no": "B5",
-      "criterion": "staining 관련 요인(흡연/vaping, tea, coffee, 착색 음식)을 시간 낭비 없이 확인했는가"
-     }
-    ]
-   },
-   {
-    "id": "C",
-    "name": "Diagnosis",
-    "max": 8,
-    "items": [
-     {
-      "no": "C1",
-      "criterion": "현재 amalgam fillings에 임상적 문제가 없고 요구는 순수하게 심미적임을 명확히 정리했는가"
-     },
-     {
-      "no": "C2",
-      "criterion": "OPG(전악 방사선사진) 옆에 서서 치아를 직접 가리키며 filling 크기를 평가했는가 (examiner가 먼저 묻게 만들지 않았는가)"
-     },
-     {
-      "no": "C3",
-      "criterion": "작은 filling은 composite, marginal ridge/cusp가 관여된 중등도는 inlay/onlay, 매우 큰 것은 crown으로 치아별 판단을 제시했는가"
-     },
-     {
-      "no": "C4",
-      "criterion": "grinding 병력을 심미 수복물의 강도 문제와 연결지어 진단적으로 해석했는가"
-     }
-    ]
-   },
-   {
-    "id": "D",
-    "name": "Management",
-    "max": 10,
-    "items": [
-     {
-      "no": "D1",
-      "criterion": "수은 노출은 filling을 mixing/placing 할 때와 제거할 때만 발생하고, 구강 내 결합 상태에서는 노출이 거의 없다고 설명했는가 (환경 수은 노출과 비교 포함)"
-     },
-     {
-      "no": "D2",
-      "criterion": "일부 국가의 금지 이유가 폐기물 처리 시스템 부재에 따른 환경 문제이며, 호주는 엄격한 disposal 규정(suction trap, 별도 수거통)을 갖췄다고 설명했는가"
-     },
-     {
-      "no": "D3",
-      "criterion": "SMART protocol(Safe Mercury Amalgam Removal Technique)을 이름 뜻까지 포함해 설명하고, 보호 bib, 보호 안경, nasal oxygen mask, rubber dam 격리, chunk 제거, 충분한 물과 high volume suction을 언급했는가"
-     },
-     {
-      "no": "D4",
-      "criterion": "do nothing 포함 모든 옵션(composite, inlay/onlay, crown)을 제시하고 각각 대략적 비용을 dollars로 말했는가 (composite 250+, inlay/onlay 700+, crown 1800+, grinder면 zirconia 300-400 추가)"
-     },
-     {
-      "no": "D5",
-      "criterion": "교체하지 않도록 설득을 시도했는가 - 큰 후방 filling 제거 시 신경에 가까워져 root canal 등 더 큰 치료로 갈 위험, 그리고 grinder라서 white filling이 자주 깨진다는 두 가지 근거 제시"
-     },
-     {
-      "no": "D6",
-      "criterion": "당일에는 clean만 하고, 정보를 인쇄해 주며 다음 방문에 결정하도록 연기했는가 (충동적 결정 방지)"
-     }
-    ]
-   },
-   {
-    "id": "E",
-    "name": "Health Promotion & Professionalism",
-    "max": 4,
-    "items": [
-     {
-      "no": "E1",
-      "criterion": "WHO 또는 Australian Dental Association 자료/브로슈어 등 근거 기반 자료를 제공하겠다고 했는가"
-     },
-     {
-      "no": "E2",
-      "criterion": "composite 착색 관리를 위해 6개월마다 polishing이 필요하다고 안내했는가, 그리고 grinder에게 night guard(splint)를 제안했는가"
-     }
-    ]
-   }
-  ],
-  "criticalFails": [
-   "환자가 문제가 없고 순수 심미 목적일 때 교체하지 않아도 된다고 설득하는 대화를 아예 시도하지 않은 경우 - 이 유형 케이스의 1순위 탈락 사유",
-   "모든 옵션과 장단점을 설명한 뒤에도 환자가 원할 때 윤리적이지 않다며 거부하거나 second opinion으로 넘기는 경우",
-   "흡연/음주/습관을 물을 때 판단하는 어조로 환자가 자신의 습관에 대해 기분 나쁘게 느끼도록 만든 경우",
-   "staining 예시를 들 때 curry를 언급하는 것 - 인종차별로 간주됨"
-  ]
- },
- "stationNo": 32,
- "card": {
-  "station": 32,
-  "patient": "Mrs. Chen — adult female",
-  "complaint": "I want these silver fillings out — I've read the mercury is dangerous.",
-  "sections": [
-   {
-    "heading": "History",
-    "items": [
-     "Attended for a check-up and clean.",
-     "Wants amalgams replaced with tooth-coloured fillings (partner read they are harmful); dislikes the colour.",
-     "Reports some hair loss and worsening eyesight."
-    ]
-   },
-   {
-    "heading": "Social history",
-    "items": [
-     "Smoker (or vaper)."
-    ]
-   },
-   {
-    "heading": "Medical history",
-    "items": [
-     "Nil relevant."
-    ]
-   },
-   {
-    "heading": "Clinical findings on examination",
-    "items": [
-     "Multiple amalgam restorations, largely intact margins",
-     "No secondary caries on the fillings in question",
-     "Possible occlusal wear / signs of grinding"
-    ]
-   },
-   {
-    "heading": "Provided to you",
-    "items": [
-     "Intraoral photographs",
-     "Radiographs (bitewings)"
-    ]
-   }
-  ],
-  "tasks": [
-   "Take a relevant history",
-   "Explain your findings to the patient",
-   "Discuss management options"
-  ]
- }
-}
-];
+const BUILTIN = [];   // 케이스는 코드에 넣지 않는다. 각자 "케이스 불러오기"로 자기 폰에만 저장한다.
 
 /* ══════════ 상태 ══════════ */
 const S = {
-  cases: [], caseIx: 0, kase: null,
+  metas: [], kase: null,
   turns: [],            // {role:'dr'|'pt', text}
   recog: null, listening: false, want: false, buffer: "", silT: null,
   readT: null, stnT: null, stnLeft: 0,
@@ -588,6 +322,7 @@ function fail(msg){
 }
 
 /* ══════════ 저장 ══════════ */
+const PFX = "osce.";
 const store = {
   get k(){ try{ return localStorage.getItem("osce.key") || ""; }catch(e){ return ""; } },
   set k(v){ try{ localStorage.setItem("osce.key", v); }catch(e){} },
@@ -595,6 +330,8 @@ const store = {
   set m(v){ try{ localStorage.setItem("osce.model", v); }catch(e){} },
   get r(){ try{ return parseFloat(localStorage.getItem("osce.rate")) || 1.3; }catch(e){ return 1.3; } },
   set r(v){ try{ localStorage.setItem("osce.rate", v); }catch(e){} },
+  get end(){ try{ return localStorage.getItem("osce.end")||"tap"; }catch(e){ return "tap"; } },
+  set end(v){ try{ localStorage.setItem("osce.end", v); }catch(e){} },
   get eng(){ try{ return localStorage.getItem("osce.engine") || "tts"; }catch(e){ return "tts"; } },
   set eng(v){ try{ localStorage.setItem("osce.engine", v); }catch(e){} },
   get elk(){ try{ return localStorage.getItem("osce.elkey") || ""; }catch(e){ return ""; } },
@@ -603,8 +340,40 @@ const store = {
   set elv(v){ try{ localStorage.setItem("osce.elvoice", v); }catch(e){} },
   get elvn(){ try{ return localStorage.getItem("osce.elvname") || ""; }catch(e){ return ""; } },
   set elvn(v){ try{ localStorage.setItem("osce.elvname", v); }catch(e){} },
-  get packs(){ try{ return JSON.parse(localStorage.getItem("osce.packs") || "[]"); }catch(e){ return []; } },
-  set packs(v){ try{ localStorage.setItem("osce.packs", JSON.stringify(v)); }catch(e){} }
+  idx(){
+    try{
+      const v = JSON.parse(localStorage.getItem(PFX+"index")||"[]");
+      return v.map(x => typeof x === "string" ? { id:x, title:x } : x);   // 예전 형식도 읽는다
+    }catch(e){ return []; }
+  },
+  meta(c){
+    return { id:c.id, title:c.title||c.id, code:c.code||"",
+             module:c.module||99, moduleName:c.moduleName||"", moduleColor:c.moduleColor||"" };
+  },
+  load(id){                            // 고른 케이스 하나만 펼친다
+    try{ const raw = localStorage.getItem(PFX+"c."+id); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return null; }
+  },
+  addPacks(list){
+    const ids = store.idx();
+    let n = 0;
+    for(const c of list){
+      try{ localStorage.setItem(PFX+"c."+c.id, JSON.stringify(c)); }
+      catch(e){
+        try{ localStorage.setItem(PFX+"index", JSON.stringify(ids)); }catch(e2){}
+        throw new Error("저장 공간이 찼습니다. "+n+"개까지 들어갔습니다. 나머지는 나눠서 넣으세요.");
+      }
+      const at = ids.findIndex(x => x.id === c.id);
+      if(at < 0) ids.push(store.meta(c)); else ids[at] = store.meta(c);
+      n++;
+    }
+    localStorage.setItem(PFX+"index", JSON.stringify(ids));
+    return n;
+  },
+  clearPacks(){
+    for(const m of store.idx()){ try{ localStorage.removeItem(PFX+"c."+m.id); }catch(e){} }
+    try{ localStorage.removeItem(PFX+"index"); }catch(e){}
+  },
 };
 
 /* ══════════ 호환성 확인 ══════════ */
@@ -622,10 +391,34 @@ const canSpeak = "speechSynthesis" in window;
 })();
 
 /* ══════════ 케이스 목록 ══════════ */
+function groupOptions(cases){
+  const groups = [];
+  cases.forEach((c,i) => {
+    const key = c.moduleName || "분류 없음";
+    let g = groups.find(x => x.key === key);
+    if(!g){ g = { key:key, no:(c.module||99), color:c.moduleColor||"#8A8F98", items:[] };
+            groups.push(g); }
+    g.items.push({ i:i, label:(c.code ? c.code+"  " : "") + (c.title||c.id) });
+  });
+  groups.sort((a,b) => a.no - b.no);
+  return groups.map(g =>
+    '<optgroup label="'+esc((g.no<90 ? "Module "+g.no+" — " : "")+g.key)+'">' +
+    g.items.map(o => '<option value="'+o.i+'">'+esc(o.label)+"</option>").join("") +
+    "</optgroup>").join("");
+}
+
 function loadCases(){
-  S.cases = BUILTIN.concat(store.packs);
-  $("caseSel").innerHTML = S.cases
-    .map((c,i) => '<option value="'+i+'">'+esc(c.title)+"</option>").join("");
+  S.metas = BUILTIN.map(store.meta).concat(store.idx());
+  $("caseSel").innerHTML = S.metas.length
+    ? groupOptions(S.metas)
+    : '<option value="">— 아래에서 케이스를 먼저 넣으세요 —</option>';
+}
+
+function takeCase(i){
+  const m = S.metas[i];
+  if(!m) return null;
+  const built = BUILTIN.find(c => c.id === m.id);
+  return built || store.load(m.id);
 }
 
 /* ══════════ 음성 ══════════ */
@@ -740,6 +533,7 @@ const SILENCE_MS = 1600;               // 이만큼 조용하면 말이 끝난 �
 
 function armSilence(){
   clearTimeout(S.silT);
+  if(store.end !== "auto") return;      // 탭 방식이면 자동 종료 안 함
   S.silT = setTimeout(() => {
     if(S.want && S.buffer.trim()){      // 뭔가 말했고 아직 듣는 중이면 전송
       S.want = false;
@@ -759,7 +553,8 @@ function startRecog(){
   r.onstart = () => {
     S.listening = true;
     $("mic").classList.add("live");
-    $("mic").textContent = "듣는 중 — 멈추면 자동 전송";
+    $("mic").textContent = store.end === "auto"
+      ? "듣는 중 — 멈추면 자동 전송" : "듣는 중 — 다 말하면 다시 탭";
     armSilence();
   };
 
@@ -1128,6 +923,7 @@ $("go").onclick = () => {
   store.k = key;
   store.m = $("model").value.trim() || "claude-sonnet-5";
   store.r = parseFloat($("rate").value) || 1.3;
+  store.end = $("endmode").value;
   store.eng = $("engine").value;
   if(store.eng === "11"){
     store.elk = $("elKey").value.trim();
@@ -1138,7 +934,7 @@ $("go").onclick = () => {
     }
   }
   S.elWarned = false;
-  S.kase = S.cases[+$("caseSel").value];
+  S.kase = takeCase(+$("caseSel").value);
   if(!S.kase){ fail("케이스가 없습니다."); return; }
   primeVoice();
 
@@ -1225,6 +1021,42 @@ $("finish").onclick = async () => {
   };
 };
 
+function reportFile(){
+  const k = S.kase;
+  const when = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const stamp = when.getFullYear()+pad(when.getMonth()+1)+pad(when.getDate())+
+                "_"+pad(when.getHours())+pad(when.getMinutes());
+  const css = document.querySelector("style").textContent;
+  const html =
+'<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">' +
+'<meta name="viewport" content="width=device-width, initial-scale=1">' +
+'<meta name="color-scheme" content="light only">' +
+"<title>"+esc(k.title||k.id)+" — 채점 결과</title><style>"+css+
+".wrap{padding-bottom:40px}</style></head><body><div class=wrap>" +
+"<h1>"+esc(k.title||k.id)+"</h1>" +
+'<p class="note">'+esc((k.code?k.code+" · ":"")+(k.station||"")) +
+" · "+when.toLocaleString("ko-KR")+"</p>" +
+$("report").innerHTML +
+"</div></body></html>";
+  const name = (k.code ? k.code+"_" : "") + (k.id||"osce") + "_" + stamp + ".html";
+  return { name:name, blob:new Blob([html], {type:"text/html;charset=utf-8"}) };
+}
+
+$("saveReport").onclick = async () => {
+  const f = reportFile();
+  const file = new File([f.blob], f.name, {type:"text/html"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({ files:[file], title:"OSCE 채점 결과" }); return; }
+    catch(e){ if(e && e.name === "AbortError") return; }
+  }
+  const url = URL.createObjectURL(f.blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = f.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+};
+
 $("again").onclick = () => { setClock(0,""); show("s-setup"); };
 
 /* ── ElevenLabs ── */
@@ -1265,25 +1097,32 @@ $("elLoad").onclick = async () => {
   }finally{ btn.disabled = false; }
 };
 
-$("openImport").onclick = () => $("importBox").classList.toggle("hide");$("doImport").onclick = () => {
+$("openImport").onclick = () => $("importBox").classList.toggle("hide");
+
+$("doImport").onclick = () => {
+  let add;
   try{
     const v = JSON.parse($("importJson").value);
-    const add = Array.isArray(v) ? v : [v];
+    add = Array.isArray(v) ? v : [v];
     add.forEach(c => {
       if(!c.id || !c.patient || !c.cues || !c.rubric || !c.rubric.domains)
         throw new Error("id, patient, cues, rubric 이 모두 필요합니다.");
     });
-    store.packs = store.packs.filter(p => !add.some(a => a.id === p.id)).concat(add);
-    loadCases();
-    $("importJson").value = "";
-    $("importBox").classList.add("hide");
-  }catch(e){ fail("JSON을 읽지 못했습니다: " + e.message); }
+  }catch(e){ fail("JSON을 읽지 못했습니다: " + e.message); return; }
+  let n = 0;
+  try{ n = store.addPacks(add); }
+  catch(e){ loadCases(); fail(e.message); return; }
+  loadCases();
+  $("importJson").value = "";
+  $("importBox").classList.add("hide");
+  fail(n + "개 케이스를 넣었습니다.");
 };
 
 /* 시작 */
 $("key").value = store.k;
 $("model").value = store.m;
 $("rate").value = String(store.r);
+$("endmode").value = store.end;
 $("engine").value = store.eng;
 $("elKey").value = store.elk;
 toggleEl();
