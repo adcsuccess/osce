@@ -192,7 +192,7 @@
   <p class="lede">큐카드를 읽고, 환자와 영어로 말하고, 채점표대로 결과를 받습니다.</p>
 
   <div id="compat"></div>
-  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v18 · 롤플레이 · 아이폰</p>
+  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v19 · 롤플레이 · 아이폰</p>
 
 
   <label for="key">Anthropic API 키</label>
@@ -317,10 +317,10 @@ const BUILTIN = [];   // 케이스는 코드에 넣지 않는다. 각자 "케이
 
 /* ══════════ 상태 ══════════ */
 const S = {
-  draft: "", userStop: false,
+  draft: "", userStop: false, before: "", said: "", seen: "",
   metas: [], kase: null,
   turns: [],            // {role:'dr'|'pt', text}
-  recog: null, listening: false, 
+  listening: false, 
   readT: null, stnT: null, stnLeft: 0,
   speaking: null, busy: false
 };
@@ -357,8 +357,8 @@ window.addEventListener("popstate", ev => {
       try{ history.pushState({ s:from }, ""); }catch(e){}   // 그대로 머문다
       return;
     }
-    if(S.listening){ try{ S.recog.stop(); }catch(e){} }
-    if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+    if(S.listening && recog){ S.userStop = false; try{ recog.stop(); }catch(e){} }
+    quiet();
     recStop();
     clearInterval(S.stnT);
   }
@@ -578,7 +578,6 @@ function pickVoice(vs, hint){
       || null;
 }
 
-let elAudio = null;
 
 function browserSay(text){
   if(!canSpeak) return;
@@ -609,21 +608,19 @@ async function elevenSay(text){
     throw new Error("ElevenLabs 오류 " + res.status);
   }
   const url = URL.createObjectURL(await res.blob());
-  if(elAudio){ try{ elAudio.pause(); }catch(e){} }
-  elAudio = new Audio(url);
-  elAudio.playbackRate = store.r;
-  elAudio.onended = () => {
-    URL.revokeObjectURL(url);
-    try{ elAudio.removeAttribute("src"); elAudio.load(); }catch(e){}
-    elAudio = null;                    // 끝나면 바로 자원을 놓는다
-  };
-  await elAudio.play();
+  const a = getPlayer();
+  try{ a.pause(); }catch(e){}
+  if(a.dataset.url) URL.revokeObjectURL(a.dataset.url);
+  a.dataset.url = url;
+  a.src = url;
+  a.playbackRate = store.r;
+  await a.play();
 }
 
 async function say(text){
   if(!text) return;
   S.speaking = text;
-  if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+  quiet();
   speechSynthesis && speechSynthesis.cancel();
 
   if(!voiceCache && canSpeak){
@@ -670,46 +667,37 @@ function setDraft(txt){
   if(!S.listening) $("mic").textContent = S.draft ? "이어서 말하기" : "탭하고 말하기";
 }
 
-function releaseAudio(){
-  // iOS 는 재생 중인 오디오가 자원을 붙들고 있으면 음성인식을 조용히 거부한다.
-  try{ speechSynthesis.cancel(); }catch(e){}
-  if(elAudio){
-    try{
-      elAudio.pause();
-      elAudio.removeAttribute("src");
-      elAudio.srcObject = null;
-      elAudio.load();                  // 여기까지 해야 자원이 풀린다
-    }catch(e){}
-    elAudio = null;
+/* iOS 는 인식기와 오디오 객체를 매번 새로 만들면 몇 턴 뒤 막아버린다.
+   그래서 각각 하나만 만들어 끝까지 재사용한다. */
+
+let recog = null;          // 인식기 하나
+let player = null;         // 재생기 하나
+
+function getPlayer(){
+  if(!player){
+    player = new Audio();
+    player.preload = "auto";
   }
-  if(S.recog){                         // 예전 인식기 참조를 끊는다 (abort 는 하지 않는다)
-    try{ S.recog.onresult = S.recog.onend = S.recog.onerror = S.recog.onstart = null; }catch(e){}
-    S.recog = null;
-  }
+  return player;
 }
 
-function listen(){
-  if(!SR){ typeTurn(); return; }
-  if(S.listening){                      // 두 번째 탭 = 내가 끝낸 것 → 전송
-    S.userStop = true;
-    try{ S.recog.stop(); }catch(e){}
-    return;
-  }
-  releaseAudio();
+function quiet(){          // 재생만 멈춘다. 객체는 버리지 않는다.
+  try{ speechSynthesis.cancel(); }catch(e){}
+  if(player){ try{ player.pause(); }catch(e){} }
+}
 
+function getRecog(){
+  if(recog) return recog;
+  if(!SR) return null;
   const r = new SR();
   r.lang = "en-AU";
   r.interimResults = true;
   r.continuous = false;
   r.maxAlternatives = 1;
-  S.recog = r;
-  S.userStop = false;
-
-  const before = S.draft ? S.draft + " " : "";
-  let said = "", seen = "";
 
   r.onstart = () => {
     S.listening = true;
+    S.said = ""; S.seen = "";
     $("mic").classList.add("live");
     $("mic").textContent = "듣는 중 — 다 말하면 다시 탭";
     $("send").classList.add("hide");
@@ -721,9 +709,9 @@ function listen(){
       const t = e.results[i][0].transcript;
       if(e.results[i].isFinal) fin += t + " "; else interim += t + " ";
     }
-    said = fin;
-    const shown = (before + fin + interim).replace(/\s+/g, " ").trim();
-    if(shown) seen = shown;
+    S.said = fin;
+    const shown = (S.before + fin + interim).replace(/\s+/g, " ").trim();
+    if(shown) S.seen = shown;
     $("draft").textContent = shown;
     $("draft").classList.remove("hide");
   };
@@ -738,25 +726,59 @@ function listen(){
   r.onend = () => {
     S.listening = false;
     $("mic").classList.remove("live");
-    // 확정이 없으면 화면에 보이던 글자를 쓴다
-    const got = (said.trim() ? (before + said).replace(/\s+/g," ").trim() : seen.trim()) || before.trim();
+    const got = (S.said.trim()
+                  ? (S.before + S.said).replace(/\s+/g, " ").trim()
+                  : S.seen.trim()) || S.before.trim();
     setDraft(got);
-    if(S.userStop && S.draft){          // 내가 끝냈다 → 바로 전송
+    if(S.userStop && S.draft){          // 내가 탭해서 끝냈다 → 전송
       const t = S.draft;
       setDraft("");
       submitTurn(t);
     }
-    // iOS 가 끊은 것이면 그대로 둔다. 이어서 말하거나 보내기를 누르면 된다.
+    // iOS 가 끊은 것이면 초안으로 남긴다
   };
 
-  S.startedAt = Date.now();
+  recog = r;
+  return r;
+}
+
+function setDraft(txt){
+  S.draft = (txt || "").replace(/\s+/g, " ").trim();
+  const has = !!S.draft && !S.listening;
+  $("draft").textContent = S.draft;
+  $("draft").classList.toggle("hide", !has);
+  $("send").classList.toggle("hide", !has);
+  $("clearDraft").disabled = !S.draft;
+  if(!S.listening) $("mic").textContent = S.draft ? "이어서 말하기" : "탭하고 말하기";
+}
+
+function listen(){
+  const r = getRecog();
+  if(!r){ typeTurn(); return; }
+
+  if(S.listening){                      // 두 번째 탭 = 내가 끝낸 것
+    S.userStop = true;
+    try{ r.stop(); }catch(e){}
+    return;
+  }
+
+  quiet();
+  S.userStop = false;
+  S.before = S.draft ? S.draft + " " : "";
+  S.said = ""; S.seen = "";
+
   try{ r.start(); }
-  catch(e){ setDraft(S.draft); fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 주세요."); return; }
-  // 1.2초 안에 시작 신호가 없으면 iOS 가 막은 것 — 조용히 넘어가지 않고 알린다
+  catch(e){
+    // 이미 돌고 있다고 하면 한 번 멈췄다 다시 시작한다
+    try{ r.stop(); }catch(e2){}
+    setTimeout(() => { try{ r.start(); }catch(e3){
+      fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 주세요.");
+    } }, 250);
+    return;
+  }
   setTimeout(() => {
-    if(S.recog === r && !S.listening)
-      fail("마이크가 열리지 않았습니다. 한 번 더 탭해 주세요.");
-  }, 1200);
+    if(!S.listening) fail("마이크가 열리지 않았습니다. 한 번 더 탭해 주세요.");
+  }, 1500);
 }
 
 function typeTurn(){
@@ -1179,9 +1201,9 @@ $("go").onclick = () => {
 };
 
 function leaveStation(){
-  if(S.listening){ try{ S.recog.stop(); }catch(e){} }
+  if(S.listening && recog){ S.userStop = false; try{ recog.stop(); }catch(e){} }
   speechSynthesis && speechSynthesis.cancel();
-  if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+  quiet();
   recStop();
   clearInterval(S.stnT); clearInterval(S.readT);
   setClock(0, "");
@@ -1213,7 +1235,7 @@ $("typeIn").onclick = typeTurn;
 $("repeat").onclick = () => { if(S.speaking) say(S.speaking); };
 
 $("finish").onclick = async () => {
-  if(S.listening){ try{ S.recog.stop(); }catch(e){} }
+  if(S.listening && recog){ S.userStop = false; try{ recog.stop(); }catch(e){} }
   speechSynthesis && speechSynthesis.cancel();
   clearInterval(S.stnT);
 
