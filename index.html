@@ -185,7 +185,7 @@
   <p class="lede">큐카드를 읽고, 환자와 영어로 말하고, 채점표대로 결과를 받습니다.</p>
 
   <div id="compat"></div>
-  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v15 · 롤플레이 · 아이폰</p>
+  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v16 · 롤플레이 · 아이폰</p>
 
 
   <label for="key">Anthropic API 키</label>
@@ -658,7 +658,8 @@ function listen(){
   r.maxAlternatives = 1;
   S.recog = r;
 
-  let said = "";
+  let said = "";       // 확정 결과
+  let seen = "";       // 화면에 보이던 잠정 결과 — 확정이 안 올 때의 대비책
 
   r.onstart = () => {
     S.listening = true;
@@ -674,7 +675,9 @@ function listen(){
       if(e.results[i].isFinal) fin += t + " "; else interim += t + " ";
     }
     said = fin;
-    drawInterim((fin + interim).replace(/\s+/g, " ").trim());
+    const shown = (fin + interim).replace(/\s+/g, " ").trim();
+    if(shown) seen = shown;
+    drawInterim(shown);
   };
 
   r.onerror = e => {
@@ -689,7 +692,8 @@ function listen(){
     $("mic").classList.remove("live");
     $("mic").textContent = "탭하고 말하기";
     clearInterim();
-    const t = said.trim();
+    // iOS 는 탭으로 끊으면 확정 결과를 주지 않는다. 그때는 보이던 글자를 쓴다.
+    const t = (said.trim() || seen.trim());
     if(t) submitTurn(t);
   };
 
