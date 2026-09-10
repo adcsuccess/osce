@@ -185,7 +185,7 @@
   <p class="lede">큐카드를 읽고, 환자와 영어로 말하고, 채점표대로 결과를 받습니다.</p>
 
   <div id="compat"></div>
-  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v12 · 롤플레이</p>
+  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v13 · 롤플레이</p>
 
 
   <label for="key">Anthropic API 키</label>
@@ -753,6 +753,12 @@ function typeTurn(){
 
 /* ══════════ 대본 그리기 ══════════ */
 function drawScript(){
+  if(!S.turns.length){
+    $("script").innerHTML =
+      '<p class="note" style="padding:22px 0 4px">' +
+      '방에 들어왔습니다. 먼저 인사하고 대화를 시작하세요.</p>';
+    return;
+  }
   $("script").innerHTML = S.turns.map(t =>
     '<div class="turn '+(t.role==="dr"?"dr":"pt")+'">' +
       '<div class="who">'+(t.role==="dr" ? "Dentist" : esc(S.kase.patient.name))+"</div>" +
@@ -874,6 +880,10 @@ function patientSystem(){
     "WHO YOU ARE",
     k.patient.persona,
     "",
+    "WHY YOU CAME — say this in your own words once the dentist invites you to speak.",
+    "Do not blurt it out before they greet you or ask what brings you in.",
+    k.patient.opening,
+    "",
     "HIDDEN INFORMATION — the notes below are written in Korean for the examiner.",
     "Never speak Korean. Reveal an item ONLY when the dentist asks something that would",
     "naturally draw it out, and say it in your own English. Never volunteer it. Never give",
@@ -892,12 +902,11 @@ function patientSystem(){
 }
 async function patientReply(){
   const msgs = [];
-  msgs.push({ role:"user", content:"[The dentist greets you. Give your opening line.]" });
-  msgs.push({ role:"assistant", content:S.kase.patient.opening });
   S.turns.forEach(t => {
-    if(t.role === "dr") msgs.push({ role:"user", content:t.text });
-    else if(t.text !== S.kase.patient.opening) msgs.push({ role:"assistant", content:t.text });
+    msgs.push({ role: t.role === "dr" ? "user" : "assistant", content:t.text });
   });
+  if(!msgs.length || msgs[0].role !== "user")
+    msgs.unshift({ role:"user", content:"[The dentist walks in.]" });
   return claude(patientSystem(), msgs, 220);
 }
 
@@ -1103,11 +1112,10 @@ function enterStation(){
   clearInterval(S.readT);
   show("s-station");
   buildPinned();
-  S.turns = [{ role:"pt", text:S.kase.patient.opening }];
+  S.turns = [];
   drawScript();
   runStation();
   recStart();
-  say(S.kase.patient.opening);
 }
 
 $("go").onclick = () => {
