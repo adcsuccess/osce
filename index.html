@@ -192,7 +192,7 @@
   <p class="lede">큐카드를 읽고, 환자와 영어로 말하고, 채점표대로 결과를 받습니다.</p>
 
   <div id="compat"></div>
-  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v17 · 롤플레이 · 아이폰</p>
+  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v18 · 롤플레이 · 아이폰</p>
 
 
   <label for="key">Anthropic API 키</label>
@@ -612,7 +612,11 @@ async function elevenSay(text){
   if(elAudio){ try{ elAudio.pause(); }catch(e){} }
   elAudio = new Audio(url);
   elAudio.playbackRate = store.r;
-  elAudio.onended = () => URL.revokeObjectURL(url);
+  elAudio.onended = () => {
+    URL.revokeObjectURL(url);
+    try{ elAudio.removeAttribute("src"); elAudio.load(); }catch(e){}
+    elAudio = null;                    // 끝나면 바로 자원을 놓는다
+  };
   await elAudio.play();
 }
 
@@ -666,6 +670,24 @@ function setDraft(txt){
   if(!S.listening) $("mic").textContent = S.draft ? "이어서 말하기" : "탭하고 말하기";
 }
 
+function releaseAudio(){
+  // iOS 는 재생 중인 오디오가 자원을 붙들고 있으면 음성인식을 조용히 거부한다.
+  try{ speechSynthesis.cancel(); }catch(e){}
+  if(elAudio){
+    try{
+      elAudio.pause();
+      elAudio.removeAttribute("src");
+      elAudio.srcObject = null;
+      elAudio.load();                  // 여기까지 해야 자원이 풀린다
+    }catch(e){}
+    elAudio = null;
+  }
+  if(S.recog){                         // 예전 인식기 참조를 끊는다 (abort 는 하지 않는다)
+    try{ S.recog.onresult = S.recog.onend = S.recog.onerror = S.recog.onstart = null; }catch(e){}
+    S.recog = null;
+  }
+}
+
 function listen(){
   if(!SR){ typeTurn(); return; }
   if(S.listening){                      // 두 번째 탭 = 내가 끝낸 것 → 전송
@@ -673,8 +695,7 @@ function listen(){
     try{ S.recog.stop(); }catch(e){}
     return;
   }
-  speechSynthesis && speechSynthesis.cancel();
-  if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+  releaseAudio();
 
   const r = new SR();
   r.lang = "en-AU";
@@ -728,8 +749,14 @@ function listen(){
     // iOS 가 끊은 것이면 그대로 둔다. 이어서 말하거나 보내기를 누르면 된다.
   };
 
+  S.startedAt = Date.now();
   try{ r.start(); }
-  catch(e){ setDraft(S.draft); fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 주세요."); }
+  catch(e){ setDraft(S.draft); fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 주세요."); return; }
+  // 1.2초 안에 시작 신호가 없으면 iOS 가 막은 것 — 조용히 넘어가지 않고 알린다
+  setTimeout(() => {
+    if(S.recog === r && !S.listening)
+      fail("마이크가 열리지 않았습니다. 한 번 더 탭해 주세요.");
+  }, 1200);
 }
 
 function typeTurn(){
