@@ -37,6 +37,10 @@
   textarea{min-height:120px;font-size:14px}
   .note{font-size:13px;color:var(--ink-soft);margin-top:10px;line-height:1.5}
   .hide{display:none}
+  .backlink{display:inline-block;padding:8px 12px 8px 0;margin:0 0 6px;
+            font-size:14px;color:var(--teal);font-weight:500}
+  input[type=file]{width:100%;padding:11px 12px;border:1px solid var(--rule);
+                   border-radius:3px;background:var(--card);font-size:14px}
   .recbar{display:flex;gap:8px;margin-top:14px}
   .recbar button{flex:1;padding:12px;border:1px solid var(--rule);border-radius:3px;
                  background:var(--card);font-size:14px;color:var(--teal)}
@@ -172,13 +176,18 @@
   <button class="btn ghost" id="reset">이 케이스 진도 초기화</button>
   <button class="btn ghost" id="openImport">케이스 불러오기</button>
   <div id="importBox" class="hide">
-    <label for="importJson">케이스 팩 JSON</label>
+    <label for="pickFiles">JSON 파일 고르기</label>
+    <input type="file" id="pickFiles" accept=".json,application/json" multiple>
+    <p class="note">여러 개를 한 번에 고를 수 있습니다. cases.json 묶음도 됩니다.</p>
+
+    <label for="importJson">또는 붙여넣기</label>
     <textarea id="importJson" placeholder='cases.json 내용을 붙여넣으세요'></textarea>
     <button class="btn ghost" id="doImport">추가</button>
   </div>
 </section>
 
 <section id="s-run" class="stage">
+  <button class="backlink" id="backHome">← 처음으로</button>
   <h1 id="runTitle"></h1>
   <p class="lede" id="runHow"></p>
   <div id="runBody"></div>
@@ -278,17 +287,62 @@ function pickVoice(vs){
       || vs.find(v=>v.lang&&v.lang.replace("_","-").startsWith("en-GB"))
       || vs.find(v=>v.lang&&v.lang.startsWith("en")) || null;
 }
+/* 크롬(안드로이드)은 긴 문장을 15초쯤에서 끊는다. 짧게 잘라 이어 읽는다. */
+function chunkText(text, max){
+  max = max || 170;
+  const out = [];
+  let rest = String(text).trim();
+  while(rest.length > max){
+    let cut = -1;
+    for(const mark of [". ", "? ", "! ", "; ", ", "]){
+      const at = rest.lastIndexOf(mark, max);
+      if(at > cut) cut = at + mark.length;
+    }
+    if(cut <= 0) cut = rest.lastIndexOf(" ", max);
+    if(cut <= 0) cut = max;
+    out.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if(rest) out.push(rest);
+  return out;
+}
+
+let keepAlive = null;
+function startKeepAlive(){          // 크롬이 도중에 멈추는 걸 막는다
+  stopKeepAlive();
+  keepAlive = setInterval(() => {
+    if(speechSynthesis.speaking && !speechSynthesis.paused){
+      speechSynthesis.pause(); speechSynthesis.resume();
+    }
+  }, 9000);
+}
+function stopKeepAlive(){ if(keepAlive){ clearInterval(keepAlive); keepAlive = null; } }
+
 function speak(text, onEnd){
   if(!canSpeak || !text){ onEnd && onEnd(); return; }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-AU"; if(voiceCache) u.voice = voiceCache;
-  u.rate = store.rate; u.pitch = 1.0;
-  u.onend = () => onEnd && onEnd();
-  u.onerror = () => onEnd && onEnd();
-  speechSynthesis.speak(u);
+  const parts = chunkText(text);
+  let i = 0;
+  startKeepAlive();
+
+  const next = () => {
+    if(i >= parts.length){ stopKeepAlive(); onEnd && onEnd(); return; }
+    const u = new SpeechSynthesisUtterance(parts[i++]);
+    u.lang = "en-AU"; if(voiceCache) u.voice = voiceCache;
+    u.rate = store.rate; u.pitch = 1.0;
+    let moved = false;
+    const go = () => { if(!moved){ moved = true; next(); } };
+    u.onend = go;
+    u.onerror = go;
+    speechSynthesis.speak(u);
+    // 끝 신호가 안 오는 경우를 대비한 보험
+    const guess = Math.max(3000, (parts[i-1].length / 12) * 1000 / (store.rate || 1) + 2500);
+    setTimeout(() => { if(!speechSynthesis.speaking) go(); }, guess);
+  };
+  next();
 }
 function stopSpeak(){
+  stopKeepAlive();
   if(canSpeak) speechSynthesis.cancel();
   if(elAudio){ try{ elAudio.pause(); }catch(e){} }
 }
@@ -524,7 +578,26 @@ function dock(buttons){
   document.querySelectorAll("#dockIn button").forEach(e =>
     e.onclick = () => buttons[parseInt(e.dataset.b,10)].go());
 }
+let navLock = false;
+
+function goHome(){                     // 화면 전환만 (히스토리 기록 없음)
+  stopSpeak(); S.playing = false;
+  if(REC.on){ recStop(); }
+  $("dock").classList.add("hide");
+  document.querySelectorAll(".stage").forEach(e=>e.classList.remove("on"));
+  $("s-home").classList.add("on"); drawSteps(); window.scrollTo(0,0);
+}
+
+window.addEventListener("popstate", ev => {
+  const on = document.querySelector(".stage.on");
+  if(on && on.id === "s-run"){ navLock = true; goHome(); navLock = false; }
+});
+
 function home(){
+  if(!navLock){
+    // 뒤로가기 한 번으로 처음 화면에 오도록 기록을 되돌린다
+    try{ history.back(); return; }catch(e){}
+  }
   stopSpeak(); S.playing = false;
   $("dock").classList.add("hide");
   document.querySelectorAll(".stage").forEach(e=>e.classList.remove("on"));
@@ -542,6 +615,7 @@ function open_(step){
   $("runHow").textContent = meta.how;
   document.querySelectorAll(".stage").forEach(e=>e.classList.remove("on"));
   $("s-run").classList.add("on"); window.scrollTo(0,0);
+  if(!navLock){ try{ history.pushState({ s:"s-run" }, ""); }catch(e){} }
 }
 function turns(){ return (S.kase.study && S.kase.study.turns) || []; }
 function drTurns(){ return turns().filter(t => t.who === "dr"); }
@@ -696,9 +770,9 @@ function runCues(){
   try{
     const ids = store.idx();
     const withMod = ids.filter(m => m.moduleName).length;
-    $("diag").textContent = "v6 · 저장된 케이스 " + ids.length +
+    $("diag").textContent = "v12 · 저장된 케이스 " + ids.length +
       "개 · 세트 붙은 것 " + withMod + "개";
-  }catch(e){ $("diag").textContent = "v6 · 목록 확인 실패"; }
+  }catch(e){ $("diag").textContent = "v12 · 목록 확인 실패"; }
   try{ loadCases(); pickCase(); }
   catch(e){ alert("케이스 목록을 읽지 못했습니다: " + e.message); }
 
@@ -744,8 +818,32 @@ function runCues(){
     }finally{ btn.disabled = false; }
   };
 
+  try{ history.replaceState({ s:"s-home" }, ""); }catch(e){}
+  $("backHome").onclick = home;
   $("reset").onclick = () => { if(!S.kase) return; store.setProg(S.kase.id, 0); drawSteps(); };
   $("openImport").onclick = () => $("importBox").classList.toggle("hide");
+  $("pickFiles").onchange = async (ev) => {
+    const files = Array.from(ev.target.files || []);
+    if(!files.length) return;
+    let add = [], bad = [];
+    for(const f of files){
+      try{
+        const v = JSON.parse(await f.text());
+        (Array.isArray(v) ? v : [v]).forEach(c => {
+          if(c && c.id) add.push(c); else bad.push(f.name);
+        });
+      }catch(e){ bad.push(f.name); }
+    }
+    ev.target.value = "";
+    if(!add.length){ alert("읽을 수 있는 케이스가 없습니다."); return; }
+    let n = 0;
+    try{ n = store.addPacks(add); }
+    catch(e){ loadCases(); pickCase(); alert(e.message); return; }
+    loadCases(); pickCase();
+    $("importBox").classList.add("hide");
+    alert(n + "개 케이스를 넣었습니다." + (bad.length ? "  읽지 못한 파일: " + bad.join(", ") : ""));
+  };
+
   $("doImport").onclick = () => {
     let add;
     try{

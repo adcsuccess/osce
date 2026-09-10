@@ -163,6 +163,12 @@
   .err{background:#F6E4E2; border:1px solid var(--red); color:var(--red);
        padding:12px 14px; font-size:14px; margin:16px 0; border-radius:3px}
   .hide{display:none}
+  .backlink{display:inline-block;padding:8px 12px 8px 0;margin:0 0 6px;
+            font-size:14px;color:var(--teal);font-weight:500}
+  #pinBack{font-size:12.5px;color:var(--ink-soft);border:1px solid var(--rule);
+           border-radius:3px;padding:6px 9px;background:var(--card);white-space:nowrap}
+  input[type=file]{width:100%;padding:11px 12px;border:1px solid var(--rule);
+                   border-radius:3px;background:var(--card);font-size:14px}
   a{color:var(--teal)}
   @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 </style>
@@ -179,6 +185,7 @@
   <p class="lede">큐카드를 읽고, 환자와 영어로 말하고, 채점표대로 결과를 받습니다.</p>
 
   <div id="compat"></div>
+  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v12 · 롤플레이</p>
 
 
   <label for="key">Anthropic API 키</label>
@@ -187,6 +194,12 @@
 
   <label for="caseSel">케이스</label>
   <select id="caseSel"></select>
+
+  <label for="rec">내 목소리 녹음</label>
+  <select id="rec">
+    <option value="off" selected>끄기</option>
+    <option value="on">켜기 — 10분 전체를 녹음</option>
+  </select>
 
   <label for="endmode">내 말 끝내기</label>
   <select id="endmode">
@@ -228,7 +241,11 @@
   <button class="btn ghost" id="openImport">케이스 불러오기</button>
 
   <div id="importBox" class="hide">
-    <label for="importJson">케이스 팩 JSON</label>
+    <label for="pickFiles">JSON 파일 고르기</label>
+    <input type="file" id="pickFiles" accept=".json,application/json" multiple>
+    <p class="note">여러 개를 한 번에 고를 수 있습니다. cases.json 묶음도 됩니다.</p>
+
+    <label for="importJson">또는 붙여넣기</label>
     <textarea id="importJson" placeholder='{"id":"...","title":"...", ...}'></textarea>
     <button class="btn ghost" id="doImport">추가</button>
     <p class="note">JSON 하나가 케이스 하나입니다. 배열로 여러 개도 됩니다.</p>
@@ -237,6 +254,7 @@
 
 <!-- ─────────── BRIEFING ─────────── -->
 <section id="s-brief" class="stage">
+  <button class="backlink" id="briefBack">← 설정으로</button>
   <div class="cue">
     <div class="stationline" id="briefStation"></div>
     <div class="ci">CANDIDATE INSTRUCTIONS</div>
@@ -256,6 +274,7 @@
     <div class="pinbar">
       <span class="pinclock" id="stnClock">10:00</span>
       <span class="pinname" id="pinName"></span>
+      <button id="pinBack">나가기</button>
       <button id="fold">카드 접기</button>
     </div>
     <div id="pinCard"></div>
@@ -276,6 +295,7 @@
   <h1>채점 결과</h1>
   <div id="report"></div>
   <button class="btn" id="saveReport">결과 저장 · 공유</button>
+  <button class="btn ghost hide" id="saveAudio">녹음 저장 · 공유</button>
   <button class="btn ghost" id="again">처음으로</button>
 </section>
 
@@ -293,7 +313,7 @@ const BUILTIN = [];   // 케이스는 코드에 넣지 않는다. 각자 "케이
 const S = {
   metas: [], kase: null,
   turns: [],            // {role:'dr'|'pt', text}
-  recog: null, listening: false, want: false, buffer: "", silT: null,
+  recog: null, listening: false, want: false, buffer: "", carry: "", silT: null, lastStart: 0, quick: 0,
   readT: null, stnT: null, stnLeft: 0,
   speaking: null, busy: false
 };
@@ -304,11 +324,45 @@ const esc = s => String(s == null ? "" : s)
 const mmss = s => { s = Math.max(0, Math.round(s));
   return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
 
+let navLock = false;
 function show(id){
   document.querySelectorAll(".stage").forEach(e => e.classList.remove("on"));
   $(id).classList.add("on");
   window.scrollTo(0,0);
+  if(!navLock){                        // 폰 뒤로가기가 앱 안에서 동작하도록
+    try{ history.pushState({ s:id }, ""); }catch(e){}
+  }
 }
+
+function curScreen(){
+  const e = document.querySelector(".stage.on");
+  return e ? e.id : "s-setup";
+}
+
+window.addEventListener("popstate", ev => {
+  const from = curScreen();
+  const to = (ev.state && ev.state.s) || "s-setup";
+  if(from === to) return;
+
+  if(from === "s-station"){
+    const said = S.turns.filter(t => t.role === "dr").length;
+    if(said && !confirm("지금 나가면 이번 연습은 채점 없이 사라집니다. 나갈까요?")){
+      try{ history.pushState({ s:from }, ""); }catch(e){}   // 그대로 머문다
+      return;
+    }
+    S.want = false;
+    clearTimeout(S.silT);
+    if(S.listening){ try{ S.recog.stop(); }catch(e){} }
+    if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+    recStop();
+    clearInterval(S.stnT);
+  }
+  if(from === "s-brief") clearInterval(S.readT);
+  speechSynthesis && speechSynthesis.cancel();
+  setClock(0, "");
+
+  navLock = true; show(to); navLock = false;
+});
 function setClock(frac, state){
   $("clockFill").style.width = Math.min(100, frac*100) + "%";
   $("clock").className = state || "";
@@ -330,6 +384,8 @@ const store = {
   set m(v){ try{ localStorage.setItem("osce.model", v); }catch(e){} },
   get r(){ try{ return parseFloat(localStorage.getItem("osce.rate")) || 1.3; }catch(e){ return 1.3; } },
   set r(v){ try{ localStorage.setItem("osce.rate", v); }catch(e){} },
+  get rec(){ try{ return localStorage.getItem("osce.rec")||"off"; }catch(e){ return "off"; } },
+  set rec(v){ try{ localStorage.setItem("osce.rec", v); }catch(e){} },
   get end(){ try{ return localStorage.getItem("osce.end")||"tap"; }catch(e){ return "tap"; } },
   set end(v){ try{ localStorage.setItem("osce.end", v); }catch(e){} },
   get eng(){ try{ return localStorage.getItem("osce.engine") || "tts"; }catch(e){ return "tts"; } },
@@ -378,6 +434,8 @@ const store = {
 
 /* ══════════ 호환성 확인 ══════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const canSpeak = "speechSynthesis" in window;
 
 (function compat(){
@@ -573,6 +631,23 @@ async function say(text){
   browserSay(text);
 }
 
+
+/* 안드로이드는 "hi" -> "hi I" -> "hi I am" 처럼 점점 길어진 조각을 각각 확정으로 보낸다.
+   그냥 이어 붙이면 같은 말이 겹친다. 겹치는 부분을 잘라내고 합친다. */
+function mergeSpeech(acc, part){
+  const a = (acc || "").trim(), b = (part || "").trim();
+  if(!b) return a;
+  if(!a) return b;
+  const la = a.toLowerCase(), lb = b.toLowerCase();
+  if(lb.startsWith(la)) return b;          // 앞 조각이 길어진 것
+  if(la.endsWith(lb) || la.includes(lb)) return a;   // 이미 들어 있는 내용
+  const max = Math.min(la.length, lb.length);
+  for(let k = max; k >= 4; k--){           // 꼬리와 머리가 겹치면 그만큼 잘라낸다
+    if(la.slice(-k) === lb.slice(0, k)) return a + b.slice(k);
+  }
+  return a + " " + b;
+}
+
 function listen(){
   if(!SR){ typeTurn(); return; }
 
@@ -586,6 +661,7 @@ function listen(){
   speechSynthesis && speechSynthesis.cancel();
   S.want = true;
   S.buffer = "";
+  S.carry = "";
   startRecog();
 }
 
@@ -603,14 +679,19 @@ function armSilence(){
 }
 
 function startRecog(){
+  if(S.recog){                        // 예전 인식기가 남아 있으면 확실히 끊는다
+    try{ S.recog.onresult = null; S.recog.onend = null; S.recog.onerror = null; }catch(e){}
+    try{ S.recog.abort(); }catch(e){}
+  }
   const r = new SR();
   r.lang = "en-AU";
   r.interimResults = true;
-  r.continuous = true;                  // 안드로이드는 이걸로 계속 듣는다
+  r.continuous = !IS_IOS;               // iOS 에서 continuous 는 인식을 멈추게 만든다
   r.maxAlternatives = 1;
   S.recog = r;
 
   r.onstart = () => {
+    S.lastStart = Date.now();
     S.listening = true;
     $("mic").classList.add("live");
     $("mic").textContent = store.end === "auto"
@@ -619,12 +700,16 @@ function startRecog(){
   };
 
   r.onresult = e => {
-    let interim = "";
-    for(let i = e.resultIndex; i < e.results.length; i++){
+    if(S.recog !== r) return;         // 물러난 인식기의 뒤늦은 결과는 버린다
+    // 크롬은 결과 목록 전체를 다시 보낸다. 이어 붙이면 같은 말이 겹친다.
+    let fin = "", interim = "";
+    for(let i = 0; i < e.results.length; i++){
       const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal) S.buffer += t + " "; else interim += t;
+      if(e.results[i].isFinal) fin = mergeSpeech(fin, t);
+      else interim = mergeSpeech(interim, t);
     }
-    drawInterim(S.buffer + interim);
+    S.buffer = mergeSpeech(S.carry, fin);
+    drawInterim(mergeSpeech(S.buffer, interim));
     armSilence();                      // 말이 이어지는 동안 계속 미룬다
   };
 
@@ -641,8 +726,10 @@ function startRecog(){
   };
 
   r.onend = () => {
+    if(S.recog !== r) return;         // 물러난 인식기의 종료는 무시
     clearTimeout(S.silT);
     if(S.want){                         // iOS가 멋대로 끊은 것 — 다시 켠다
+      S.carry = S.buffer ? S.buffer.trim() : "";
       setTimeout(() => { if(S.want){ try{ startRecog(); }catch(e){ S.want = false; } } }, 200);
       return;
     }
@@ -651,7 +738,7 @@ function startRecog(){
     $("mic").textContent = "탭하고 말하기";
     clearInterim();
     const said = S.buffer.trim();
-    S.buffer = "";
+    S.buffer = ""; S.carry = "";
     if(said) submitTurn(said);
   };
 
@@ -672,16 +759,25 @@ function drawScript(){
       '<div class="said">'+esc(t.text)+"</div></div>").join("");
   window.scrollTo(0, document.body.scrollHeight);
 }
+let interimNode = null, lastScroll = 0;
 function drawInterim(txt){
-  clearInterim();
-  if(!txt) return;
-  const d = document.createElement("div");
-  d.className = "turn dr interim"; d.id = "interim";
-  d.innerHTML = '<div class="who">Dentist</div><div class="said">'+esc(txt)+"</div>";
-  $("script").appendChild(d);
-  window.scrollTo(0, document.body.scrollHeight);
+  if(!txt){ clearInterim(); return; }
+  if(!interimNode || !interimNode.isConnected){
+    const d = document.createElement("div");
+    d.className = "turn dr interim"; d.id = "interim";
+    d.innerHTML = '<div class="who">Dentist</div><div class="said"></div>';
+    $("script").appendChild(d);
+    interimNode = d;
+  }
+  // innerHTML 을 다시 만들지 않고 글자만 바꾼다 — 이게 렉의 원인이었다
+  interimNode.querySelector(".said").textContent = txt;
+  const now = Date.now();
+  if(now - lastScroll > 700){         // 매번 스크롤하면 화면이 튄다
+    lastScroll = now;
+    window.scrollTo(0, document.body.scrollHeight);
+  }
 }
-function clearInterim(){ const e = $("interim"); if(e) e.remove(); }
+function clearInterim(){ const e = $("interim"); if(e) e.remove(); interimNode = null; }
 
 function thinking(on){
   const e = $("think");
@@ -724,6 +820,42 @@ async function claude(system, messages, maxTokens){
   const data = await res.json();
   return (data.content || [])
     .filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+}
+
+/* ── 세션 녹음 (선택) ── */
+const REC = { mr:null, chunks:[], blob:null, on:false, stream:null };
+
+function recMime(){
+  const c = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
+  for(const t of c) if(window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+  return "";
+}
+
+async function recStart(){
+  if(store.rec !== "on") return;
+  if(!navigator.mediaDevices || !window.MediaRecorder) return;
+  try{
+    REC.stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    const mt = recMime();
+    REC.mr = mt ? new MediaRecorder(REC.stream, { mimeType:mt }) : new MediaRecorder(REC.stream);
+    REC.chunks = []; REC.blob = null;
+    REC.mr.ondataavailable = e => { if(e.data && e.data.size) REC.chunks.push(e.data); };
+    REC.mr.start(1000);
+    REC.on = true;
+  }catch(e){ fail("녹음을 시작하지 못했습니다. 연습은 그대로 진행됩니다."); }
+}
+
+function recStop(){
+  return new Promise(res => {
+    if(!REC.mr || REC.mr.state === "inactive"){ REC.on = false; return res(null); }
+    REC.mr.onstop = () => {
+      REC.on = false;
+      if(REC.stream){ REC.stream.getTracks().forEach(t => t.stop()); REC.stream = null; }
+      REC.blob = new Blob(REC.chunks, { type: REC.chunks[0] ? REC.chunks[0].type : "audio/mp4" });
+      res(REC.blob);
+    };
+    try{ REC.mr.stop(); }catch(e){ REC.on = false; res(null); }
+  });
 }
 
 /* ══════════ 환자 턴 ══════════ */
@@ -974,6 +1106,7 @@ function enterStation(){
   S.turns = [{ role:"pt", text:S.kase.patient.opening }];
   drawScript();
   runStation();
+  recStart();
   say(S.kase.patient.opening);
 }
 
@@ -983,6 +1116,7 @@ $("go").onclick = () => {
   store.k = key;
   store.m = $("model").value.trim() || "claude-sonnet-5";
   store.r = parseFloat($("rate").value) || 1.3;
+  store.rec = $("rec").value;
   store.end = $("endmode").value;
   store.eng = $("engine").value;
   if(store.eng === "11"){
@@ -1023,6 +1157,26 @@ $("go").onclick = () => {
   runRead();
 };
 
+function leaveStation(){
+  S.want = false;
+  clearTimeout(S.silT);
+  if(S.listening){ try{ S.recog.stop(); }catch(e){} }
+  speechSynthesis && speechSynthesis.cancel();
+  if(elAudio){ try{ elAudio.pause(); }catch(e){} }
+  recStop();
+  clearInterval(S.stnT); clearInterval(S.readT);
+  setClock(0, "");
+  show("s-setup");
+}
+
+$("briefBack").onclick = () => { clearInterval(S.readT); setClock(0,""); show("s-setup"); };
+
+$("pinBack").onclick = () => {
+  const said = S.turns.filter(t => t.role === "dr").length;
+  if(said && !confirm("지금 나가면 이번 연습은 채점 없이 사라집니다. 나갈까요?")) return;
+  leaveStation();
+};
+
 $("enter").onclick = () => { primeVoice(); enterStation(); };
 $("mic").onclick = () => { primeVoice(); listen(); };
 $("fold").onclick = () => {
@@ -1043,6 +1197,7 @@ $("finish").onclick = async () => {
     fail("아직 말한 게 없습니다."); return;
   }
 
+  await recStop();
   const btn = $("finish");
   btn.disabled = true;
   btn.textContent = "채점 중… 30초쯤";
@@ -1060,7 +1215,9 @@ $("finish").onclick = async () => {
   btn.textContent = "끝내고 채점";
 
   if(verdict){
-    try{ drawReport(verdict); setClock(0,""); show("s-report"); return; }
+    try{ drawReport(verdict); setClock(0,"");
+         $("saveAudio").classList.toggle("hide", !REC.blob);
+         show("s-report"); return; }
     catch(e){ lastErr = e; }
   }
 
@@ -1072,7 +1229,9 @@ $("finish").onclick = async () => {
     "</div><p class=note>대본은 아래에 그대로 있습니다. 복사해서 저와의 대화에 붙여넣으면 채점해 드릴 수 있습니다.</p>" +
     '<button class="btn ghost" id="copyScript">대본 복사</button>' +
     '<textarea id="rawScript" style="margin-top:14px;min-height:260px">' + esc(script) + "</textarea>";
-  setClock(0,""); show("s-report");
+  setClock(0,"");
+  $("saveAudio").classList.toggle("hide", !REC.blob);
+  show("s-report");
   const cb = $("copyScript");
   if(cb) cb.onclick = () => {
     const ta = $("rawScript"); ta.select();
@@ -1117,6 +1276,24 @@ $("saveReport").onclick = async () => {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 };
 
+$("saveAudio").onclick = async () => {
+  if(!REC.blob) return;
+  const k = S.kase, d = new Date(), pad = n => String(n).padStart(2,"0");
+  const ext = /mp4/.test(REC.blob.type) ? "m4a" : "webm";
+  const name = (k.code ? k.code+"_" : "") + (k.id||"osce") + "_" +
+    d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"_"+pad(d.getHours())+pad(d.getMinutes())+"."+ext;
+  const file = new File([REC.blob], name, { type: REC.blob.type });
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({ files:[file], title:"OSCE 녹음" }); return; }
+    catch(e){ if(e && e.name === "AbortError") return; }
+  }
+  const url = URL.createObjectURL(REC.blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+};
+
 $("again").onclick = () => { setClock(0,""); show("s-setup"); };
 
 /* ── ElevenLabs ── */
@@ -1155,6 +1332,28 @@ $("elLoad").onclick = async () => {
 
 $("openImport").onclick = () => $("importBox").classList.toggle("hide");
 
+$("pickFiles").onchange = async (ev) => {
+  const files = Array.from(ev.target.files || []);
+  if(!files.length) return;
+  let add = [], bad = [];
+  for(const f of files){
+    try{
+      const v = JSON.parse(await f.text());
+      (Array.isArray(v) ? v : [v]).forEach(c => {
+        if(c && c.id) add.push(c); else bad.push(f.name);
+      });
+    }catch(e){ bad.push(f.name); }
+  }
+  ev.target.value = "";
+  if(!add.length){ fail("읽을 수 있는 케이스가 없습니다."); return; }
+  let n = 0;
+  try{ n = store.addPacks(add); }
+  catch(e){ loadCases(); fail(e.message); return; }
+  loadCases();
+  $("importBox").classList.add("hide");
+  fail(n + "개 케이스를 넣었습니다." + (bad.length ? "  읽지 못한 파일: " + bad.join(", ") : ""));
+};
+
 $("doImport").onclick = () => {
   let add;
   try{
@@ -1175,11 +1374,13 @@ $("doImport").onclick = () => {
 };
 
 /* 시작 */
+try{ history.replaceState({ s:"s-setup" }, ""); }catch(e){}
 $("key").value = store.k;
 $("model").value = store.m;
 $("rate").value = String(store.r);
 migrateOldPacks();
 try{ repairIndex(); }catch(e){}
+$("rec").value = store.rec;
 $("endmode").value = store.end;
 $("engine").value = store.eng;
 $("elKey").value = store.elk;
