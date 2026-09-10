@@ -163,6 +163,9 @@
   .err{background:#F6E4E2; border:1px solid var(--red); color:var(--red);
        padding:12px 14px; font-size:14px; margin:16px 0; border-radius:3px}
   .hide{display:none}
+  .evlog{background:#1E2A31;color:#CFE3E0;font-size:11px;line-height:1.45;
+         padding:9px 11px;margin:0 0 9px;border-radius:3px;max-height:22vh;
+         overflow-y:auto;white-space:pre-wrap;font-family:ui-monospace,monospace}
   .draft{background:var(--card);border:1px solid var(--teal);border-left:3px solid var(--teal);
          padding:12px 14px;margin-bottom:9px;font-size:16px;line-height:1.5;
          max-height:24vh;overflow-y:auto}
@@ -192,7 +195,7 @@
   <p class="lede">큐카드를 읽고, 환자와 영어로 말하고, 채점표대로 결과를 받습니다.</p>
 
   <div id="compat"></div>
-  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v19 · 롤플레이 · 아이폰</p>
+  <p class="note" id="ver" style="background:var(--teal-pale);border-left:3px solid var(--teal);padding:9px 11px;margin:0 0 4px">v21 · 롤플레이 · 아이폰 · v6방식</p>
 
 
   <label for="key">Anthropic API 키</label>
@@ -287,7 +290,9 @@
       <button id="mic">탭하고 말하기</button>
       <button id="send" class="hide">보내기</button>
     </div>
+    <pre id="evlog" class="evlog hide"></pre>
     <div class="microw">
+      <button id="showLog">기록</button>
       <button id="clearDraft">지우기</button>
       <button id="typeIn">타이핑</button>
       <button id="repeat">환자 다시 듣기</button>
@@ -317,7 +322,7 @@ const BUILTIN = [];   // 케이스는 코드에 넣지 않는다. 각자 "케이
 
 /* ══════════ 상태 ══════════ */
 const S = {
-  draft: "", userStop: false, before: "", said: "", seen: "",
+  draft: "", recog: null, want: false, buffer: "", carry: "", seen: "", silT: null,
   metas: [], kase: null,
   turns: [],            // {role:'dr'|'pt', text}
   listening: false, 
@@ -357,7 +362,7 @@ window.addEventListener("popstate", ev => {
       try{ history.pushState({ s:from }, ""); }catch(e){}   // 그대로 머문다
       return;
     }
-    if(S.listening && recog){ S.userStop = false; try{ recog.stop(); }catch(e){} }
+    if(S.listening){ S.want = false; clearTimeout(S.silT); try{ S.recog.stop(); }catch(e){} }
     quiet();
     recStop();
     clearInterval(S.stnT);
@@ -667,40 +672,82 @@ function setDraft(txt){
   if(!S.listening) $("mic").textContent = S.draft ? "이어서 말하기" : "탭하고 말하기";
 }
 
-/* iOS 는 인식기와 오디오 객체를 매번 새로 만들면 몇 턴 뒤 막아버린다.
-   그래서 각각 하나만 만들어 끝까지 재사용한다. */
+/* v6 방식: 연속 인식 + 자동 재시작 + 침묵 감지 자동 전송.
+   탭 한 번에 시작, 다시 탭하면 즉시 전송. iOS 가 끊으면 알아서 다시 켠다. */
 
-let recog = null;          // 인식기 하나
-let player = null;         // 재생기 하나
-
-function getPlayer(){
-  if(!player){
-    player = new Audio();
-    player.preload = "auto";
+const LOG = [];
+function logv(msg){
+  LOG.push(new Date().toTimeString().slice(3,8) + " " + msg);
+  if(LOG.length > 40) LOG.shift();
+  const box = $("evlog");
+  if(box && !box.classList.contains("hide")){
+    box.textContent = LOG.slice(-14).join("\n");
+    box.scrollTop = box.scrollHeight;
   }
-  return player;
 }
 
-function quiet(){          // 재생만 멈춘다. 객체는 버리지 않는다.
+let player = null;
+function getPlayer(){
+  if(!player){ player = new Audio(); player.preload = "auto"; }
+  return player;
+}
+function quiet(){
   try{ speechSynthesis.cancel(); }catch(e){}
   if(player){ try{ player.pause(); }catch(e){} }
 }
 
-function getRecog(){
-  if(recog) return recog;
-  if(!SR) return null;
+const SILENCE_MS = 1600;
+
+function setDraft(txt){                 // v6 에는 없던 것 — 화면 표시용으로만 남긴다
+  S.draft = (txt || "").replace(/\s+/g, " ").trim();
+  $("draft").textContent = S.draft;
+  $("draft").classList.toggle("hide", !S.draft || S.listening);
+  $("send").classList.toggle("hide", !S.draft || S.listening);
+  $("clearDraft").disabled = !S.draft;
+  if(!S.listening) $("mic").textContent = S.draft ? "이어서 말하기" : "탭하고 말하기";
+}
+
+function armSilence(){
+  clearTimeout(S.silT);
+  S.silT = setTimeout(() => {
+    if(S.want && S.buffer.trim()){
+      S.want = false;
+      try{ S.recog.stop(); }catch(e){}
+    }
+  }, SILENCE_MS);
+}
+
+function listen(){
+  if(!SR){ typeTurn(); return; }
+  if(S.listening){                      // 두 번째 탭 = 즉시 전송
+    S.want = false;
+    clearTimeout(S.silT);
+    try{ S.recog.stop(); }catch(e){}
+    return;
+  }
+  quiet();
+  S.want = true;
+  S.buffer = S.draft ? S.draft + " " : "";
+  S.carry = S.buffer;
+  startRecog();
+}
+
+function startRecog(){
   const r = new SR();
   r.lang = "en-AU";
   r.interimResults = true;
-  r.continuous = false;
+  r.continuous = true;                  // v6 그대로
   r.maxAlternatives = 1;
+  S.recog = r;
 
   r.onstart = () => {
+    logv("onstart");
     S.listening = true;
-    S.said = ""; S.seen = "";
     $("mic").classList.add("live");
     $("mic").textContent = "듣는 중 — 다 말하면 다시 탭";
+    $("draft").classList.remove("hide");
     $("send").classList.add("hide");
+    armSilence();
   };
 
   r.onresult = e => {
@@ -709,76 +756,39 @@ function getRecog(){
       const t = e.results[i][0].transcript;
       if(e.results[i].isFinal) fin += t + " "; else interim += t + " ";
     }
-    S.said = fin;
-    const shown = (S.before + fin + interim).replace(/\s+/g, " ").trim();
+    S.buffer = (S.carry + fin).replace(/\s+/g, " ");
+    const shown = (S.buffer + " " + interim).replace(/\s+/g, " ").trim();
     if(shown) S.seen = shown;
     $("draft").textContent = shown;
     $("draft").classList.remove("hide");
+    armSilence();
   };
 
   r.onerror = e => {
-    if(e.error === "not-allowed")
-      fail("마이크 권한이 거부됐습니다. 사파리 설정에서 허용하세요.");
-    else if(e.error !== "aborted" && e.error !== "no-speech")
-      fail("음성인식 오류: " + e.error);
+    logv("onerror: " + e.error);
+    if(e.error === "not-allowed"){ S.want = false; fail("마이크 권한이 거부됐습니다."); }
+    else if(e.error !== "aborted" && e.error !== "no-speech"){ S.want = false; fail("음성인식 오류: " + e.error); }
   };
 
   r.onend = () => {
+    logv("onend" + (S.want ? " → 재시작" : " → 전송"));
+    clearTimeout(S.silT);
+    S.carry = S.buffer ? S.buffer.trim() + " " : "";
+    if(S.want){                         // iOS 가 끊은 것 — 다시 켠다
+      setTimeout(() => { if(S.want){ try{ startRecog(); }catch(e){ S.want = false; } } }, 200);
+      return;
+    }
     S.listening = false;
     $("mic").classList.remove("live");
-    const got = (S.said.trim()
-                  ? (S.before + S.said).replace(/\s+/g, " ").trim()
-                  : S.seen.trim()) || S.before.trim();
-    setDraft(got);
-    if(S.userStop && S.draft){          // 내가 탭해서 끝냈다 → 전송
-      const t = S.draft;
-      setDraft("");
-      submitTurn(t);
-    }
-    // iOS 가 끊은 것이면 초안으로 남긴다
+    const said = (S.buffer.trim() || (S.seen || "").trim());
+    S.buffer = ""; S.carry = ""; S.seen = "";
+    setDraft("");
+    if(said) submitTurn(said);
   };
 
-  recog = r;
-  return r;
-}
-
-function setDraft(txt){
-  S.draft = (txt || "").replace(/\s+/g, " ").trim();
-  const has = !!S.draft && !S.listening;
-  $("draft").textContent = S.draft;
-  $("draft").classList.toggle("hide", !has);
-  $("send").classList.toggle("hide", !has);
-  $("clearDraft").disabled = !S.draft;
-  if(!S.listening) $("mic").textContent = S.draft ? "이어서 말하기" : "탭하고 말하기";
-}
-
-function listen(){
-  const r = getRecog();
-  if(!r){ typeTurn(); return; }
-
-  if(S.listening){                      // 두 번째 탭 = 내가 끝낸 것
-    S.userStop = true;
-    try{ r.stop(); }catch(e){}
-    return;
-  }
-
-  quiet();
-  S.userStop = false;
-  S.before = S.draft ? S.draft + " " : "";
-  S.said = ""; S.seen = "";
-
+  logv("start()");
   try{ r.start(); }
-  catch(e){
-    // 이미 돌고 있다고 하면 한 번 멈췄다 다시 시작한다
-    try{ r.stop(); }catch(e2){}
-    setTimeout(() => { try{ r.start(); }catch(e3){
-      fail("마이크를 시작할 수 없습니다. 한 번 더 탭해 주세요.");
-    } }, 250);
-    return;
-  }
-  setTimeout(() => {
-    if(!S.listening) fail("마이크가 열리지 않았습니다. 한 번 더 탭해 주세요.");
-  }, 1500);
+  catch(e){ logv("start 예외: " + e.name); S.want = false; S.listening = false; }
 }
 
 function typeTurn(){
@@ -952,6 +962,7 @@ async function submitTurn(text){
   drawScript(); thinking(true);
   try{
     const reply = await patientReply();
+    logv("환자 응답 도착");
     thinking(false);
     S.turns.push({ role:"pt", text:reply });
     drawScript();
@@ -1201,7 +1212,7 @@ $("go").onclick = () => {
 };
 
 function leaveStation(){
-  if(S.listening && recog){ S.userStop = false; try{ recog.stop(); }catch(e){} }
+  if(S.listening){ S.want = false; clearTimeout(S.silT); try{ S.recog.stop(); }catch(e){} }
   speechSynthesis && speechSynthesis.cancel();
   quiet();
   recStop();
@@ -1227,6 +1238,11 @@ $("send").onclick = () => {
   submitTurn(t);
 };
 $("clearDraft").onclick = () => setDraft("");
+$("showLog").onclick = () => {
+  const b = $("evlog");
+  b.classList.toggle("hide");
+  if(!b.classList.contains("hide")) b.textContent = LOG.slice(-14).join("\n") || "(아직 없음)";
+};
 $("fold").onclick = () => {
   const c = $("pinCard"), folded = c.classList.toggle("folded");
   $("fold").textContent = folded ? "카드 펴기" : "카드 접기";
@@ -1235,7 +1251,7 @@ $("typeIn").onclick = typeTurn;
 $("repeat").onclick = () => { if(S.speaking) say(S.speaking); };
 
 $("finish").onclick = async () => {
-  if(S.listening && recog){ S.userStop = false; try{ recog.stop(); }catch(e){} }
+  if(S.listening){ S.want = false; clearTimeout(S.silT); try{ S.recog.stop(); }catch(e){} }
   speechSynthesis && speechSynthesis.cancel();
   clearInterval(S.stnT);
 
